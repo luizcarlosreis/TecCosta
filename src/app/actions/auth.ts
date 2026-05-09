@@ -13,11 +13,13 @@ export async function loginAction(formData: FormData) {
   }
 
   try {
+    console.log('Tentativa de login para:', identifier);
     const user = await prisma.user.findUnique({
       where: { cpfCnpj: identifier },
     });
 
     if (!user) {
+      console.log('Usuário não encontrado no banco.');
       return { error: 'Usuário não encontrado.' };
     }
 

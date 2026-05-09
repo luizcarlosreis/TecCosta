@@ -1,3 +1,8 @@
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { loginAction } from '@/app/actions/auth';
 
 export default function LoginPage() {
@@ -112,7 +117,7 @@ export default function LoginPage() {
           left: 0;
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, rgba(0, 51, 102, 0.8) 0%, rgba(255, 102, 0, 0.4) 100%);
+          background: linear-gradient(135deg, rgba(0, 40, 80, 0.9) 0%, rgba(255, 102, 0, 0.5) 100%);
         }
 
         .login-main {
