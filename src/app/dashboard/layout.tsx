@@ -1,8 +1,9 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
+import { logoutAction } from '@/app/actions/auth';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logoutAction();
+  };
 
   const menuItems = [
     { name: 'Início', href: '/dashboard', icon: '🏠' },
@@ -22,7 +28,7 @@ export default function DashboardLayout({
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <Image src="/logo.png" alt="TecCosta Logo" width={120} height={40} style={{ objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="TecCosta Logo" width={200} height={60} style={{ objectFit: 'contain' }} priority />
         </div>
         
         <nav className="sidebar-nav">
@@ -39,10 +45,10 @@ export default function DashboardLayout({
         </nav>
         
         <div className="sidebar-footer">
-          <Link href="/login" className="logout-btn">
+          <button onClick={handleLogout} className="logout-btn">
             <span className="icon">🚪</span>
             <span className="label">Sair</span>
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -81,7 +87,7 @@ export default function DashboardLayout({
         }
 
         .sidebar-header {
-          padding: 0 24px 40px;
+          padding: 10px 24px 30px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           margin-bottom: 20px;
         }
@@ -130,6 +136,8 @@ export default function DashboardLayout({
           padding: 12px 16px;
           color: rgba(255, 255, 255, 0.7);
           transition: all 0.2s;
+          width: 100%;
+          text-align: left;
         }
 
         .logout-btn:hover {

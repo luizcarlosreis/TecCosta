@@ -1,19 +1,27 @@
-'use client';
-
-import { useState } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { loginAction } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Logic for login would go here
-    // For now, redirect to dashboard
-    router.push('/dashboard');
+    setLoading(true);
+    setError(null);
+    
+    const formData = new FormData();
+    formData.append('identifier', identifier);
+    formData.append('password', password);
+
+    const result = await loginAction(formData);
+    
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,6 +48,7 @@ export default function LoginPage() {
           </div>
           
           <form onSubmit={handleLogin} className="login-form">
+            {error && <div className="error-message">{error}</div>}
             <div className="form-group">
               <label htmlFor="identifier">CPF ou CNPJ</label>
               <input
@@ -49,6 +58,7 @@ export default function LoginPage() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             
@@ -61,11 +71,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             
-            <button type="submit" className="login-button">
-              Entrar no Portal
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Validando...' : 'Entrar no Portal'}
             </button>
           </form>
           
@@ -139,6 +150,17 @@ export default function LoginPage() {
 
         .login-form {
           text-align: left;
+        }
+
+        .error-message {
+          background: #fee2e2;
+          color: #b91c1c;
+          padding: 10px;
+          border-radius: 6px;
+          margin-bottom: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          border: 1px solid #fecaca;
         }
 
         .form-group {
