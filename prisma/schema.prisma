@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMINISTRADOR
+  CLIENTE
+  GESTOR
+  TECNICO
+}
+
+enum RequestStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+model User {
+  id        String   @id @default(cuid())
+  cpfCnpj   String   @unique
+  name      String
+  password  String
+  role      Role     @default(CLIENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  managedClients Client[] @relation("ClientManager")
+  technicalTasks MaintenanceRequest[] @relation("TechnicianAssigned")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String   @unique
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  managers  User[]   @relation("ClientManager")
+  contacts  Contact[]
+  requests  MaintenanceRequest[]
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  role      String   // e.g., "Síndico", "Zelador"
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MaintenanceRequest {
+  id          Int           @id @default(autoincrement()) // For sequential numbering starting at 50 (configured in DB or logic)
+  requestNum  Int           @unique @default(50) // We can handle the starting point in logic or initial seed
+  title       String
+  description String
+  status      RequestStatus @default(PENDENTE)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  technicianId String?
+  technician  User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
