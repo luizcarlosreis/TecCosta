@@ -28,7 +28,14 @@ export default function DashboardLayout({
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <Image src="/logo.png" alt="TecCosta Logo" width={240} height={80} style={{ objectFit: 'contain' }} priority />
+          <Image 
+            src="/logo.png" 
+            alt="TecCosta Logo" 
+            width={280} 
+            height={100} 
+            style={{ width: '100%', height: 'auto' }} 
+            priority 
+          />
         </div>
         
         <nav className="sidebar-nav">
@@ -77,7 +84,7 @@ export default function DashboardLayout({
         }
 
         .sidebar {
-          width: 260px;
+          width: 300px;
           background-color: var(--primary-color);
           color: white;
           display: flex;
@@ -87,9 +94,9 @@ export default function DashboardLayout({
         }
 
         .sidebar-header {
-          padding: 10px 10px 20px;
+          padding: 10px 10px 25px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          margin-bottom: 20px;
+          margin-bottom: 25px;
           display: flex;
           justify-content: center;
         }
