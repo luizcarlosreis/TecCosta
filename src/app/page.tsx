@@ -53,7 +53,14 @@ export default function LoginPage() {
         <div className={styles.loginCard}>
           <div className={styles.loginHeader}>
             <div className={styles.logoWrapper}>
-              <Image src="/logo.png" alt="TecCosta Logo" width={300} height={120} style={{ objectFit: 'contain' }} priority />
+              <Image 
+                src="/logo.png" 
+                alt="TecCosta Logo" 
+                width={400} 
+                height={160} 
+                style={{ width: '100%', height: 'auto', maxWidth: '400px' }} 
+                priority 
+              />
             </div>
             <h1>Bem-vindo ao Portal</h1>
             <p>Acesse com seu CPF ou CNPJ</p>

@@ -31,8 +31,8 @@ export default function DashboardLayout({
           <Image 
             src="/logo.png" 
             alt="TecCosta Logo" 
-            width={280} 
-            height={100} 
+            width={320} 
+            height={120} 
             style={{ width: '100%', height: 'auto' }} 
             priority 
           />
@@ -84,7 +84,7 @@ export default function DashboardLayout({
         }
 
         .sidebar {
-          width: 300px;
+          width: 350px;
           background-color: var(--primary-color);
           color: white;
           display: flex;
