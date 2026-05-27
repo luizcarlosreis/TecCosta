@@ -83,6 +83,8 @@ model MaintenanceRequest {
   categoria    String        // Categoria (ex: Elétrica, Câmeras)
   subItem      String?       // Sub item opcional
   observacao   String?       // Observação livre
+  openedBy     String?       // Nome de quem abriu o chamado
+  createdById  String?       // ID de quem abriu o chamado
   status       RequestStatus @default(PENDENTE)
   clientId     String
   client       Client        @relation(fields: [clientId], references: [id])

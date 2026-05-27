@@ -17,6 +17,8 @@ interface SerializedRequest {
   categoria: string;
   subItem: string | null;
   observacao: string | null;
+  openedBy: string | null;
+  createdById: string | null;
   status: string;
   createdAt: string;
   client: SerializedClient;
@@ -105,6 +107,7 @@ export default function SolicitacaoClient({
   const [requests, setRequests] = useState<SerializedRequest[]>(initialRequests);
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'list' | 'form'>('list');
+  const [editingRequestId, setEditingRequestId] = useState<number | null>(null);
 
   // Form states
   const [description, setDescription] = useState('');
@@ -128,6 +131,7 @@ export default function SolicitacaoClient({
 
   // Efeito para preencher valores padrões de categoria e subItem conforme o Tipo do Chamado muda
   useEffect(() => {
+    if (editingRequestId) return; // Não resetar campos dinamicamente ao editar
     if (tipoChamado === 'Operacionais') {
       setCategoria('Elétrica');
       setSubItem(OPERACIONAIS_MAP['Elétrica'][0]);
@@ -135,10 +139,11 @@ export default function SolicitacaoClient({
       setCategoria('Câmeras de Monitoramento');
       setSubItem(EMERGENCIAIS_MAP['Câmeras de Monitoramento'][0]);
     }
-  }, [tipoChamado]);
+  }, [tipoChamado, editingRequestId]);
 
   // Efeito para preencher valor padrão de subItem ao trocar de categoria
   useEffect(() => {
+    if (editingRequestId) return; // Não resetar campos dinamicamente ao editar
     if (tipoChamado === 'Operacionais') {
       const subs = OPERACIONAIS_MAP[categoria];
       if (subs && subs.length > 0) {
@@ -154,9 +159,10 @@ export default function SolicitacaoClient({
         setSubItem('');
       }
     }
-  }, [categoria, tipoChamado]);
+  }, [categoria, tipoChamado, editingRequestId]);
 
   const handleNewClick = () => {
+    setEditingRequestId(null);
     setDescription('');
     setTipoChamado('Operacionais');
     setCategoria('Elétrica');
@@ -171,8 +177,33 @@ export default function SolicitacaoClient({
 
   const handleCloseForm = () => {
     setView('list');
+    setEditingRequestId(null);
     setError(null);
     setSuccess(null);
+  };
+
+  const handleEditClick = (req: SerializedRequest) => {
+    setEditingRequestId(req.id);
+    setDescription(req.description);
+    setTipoChamado(req.tipoChamado);
+    setCategoria(req.categoria);
+    
+    // Carregar orçamento se for o caso
+    if (req.tipoChamado === 'Operacionais' && req.categoria === 'Orçamento') {
+      const budgetText = req.subItem || '';
+      const match = budgetText.match(/^Orçamento:\s*(.*)$/);
+      setOrcamentoNecessidade(match ? match[1] : budgetText);
+      setSubItem('');
+    } else {
+      setSubItem(req.subItem || '');
+      setOrcamentoNecessidade('');
+    }
+
+    setObservacao(req.observacao || '');
+    setClientId(req.client.id);
+    setError(null);
+    setSuccess(null);
+    setView('form');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,13 +246,16 @@ export default function SolicitacaoClient({
       formData.append('observacao', observacao);
       formData.append('clientId', clientId);
 
-      const result = await createRequestAction(formData);
+      const { updateRequestAction } = await import('@/app/actions/requests');
+      const result = editingRequestId
+        ? await updateRequestAction(editingRequestId, formData)
+        : await createRequestAction(formData);
 
       if (result?.error) {
         setError(result.error);
         setLoading(false);
       } else {
-        setSuccess('Solicitação de chamado enviada com sucesso!');
+        setSuccess(editingRequestId ? 'Solicitação de chamado atualizada com sucesso!' : 'Solicitação de chamado enviada com sucesso!');
         
         // Recarregar lista do banco de dados
         const updated = await getRequestsAction();
@@ -256,6 +290,17 @@ export default function SolicitacaoClient({
     }
   };
 
+  // Formatador de data e hora do chamado solicitado
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  };
+
   // Filtrar chamados
   const filteredRequests = requests.filter((r) => {
     const query = searchQuery.toLowerCase();
@@ -264,6 +309,7 @@ export default function SolicitacaoClient({
       r.categoria.toLowerCase().includes(query) ||
       (r.subItem && r.subItem.toLowerCase().includes(query)) ||
       r.client.name.toLowerCase().includes(query) ||
+      (r.openedBy && r.openedBy.toLowerCase().includes(query)) ||
       String(r.id).includes(query)
     );
   });
@@ -297,8 +343,12 @@ export default function SolicitacaoClient({
 
         <div className={styles.pageHeader}>
           <div>
-            <h1>Solicitar Novo Chamado</h1>
-            <p>Preencha os campos abaixo para abrir um chamado operacional ou emergencial para atendimento.</p>
+            <h1>{editingRequestId ? 'Editar Solicitação de Chamado' : 'Solicitar Novo Chamado'}</h1>
+            <p>
+              {editingRequestId 
+                ? 'Altere os campos abaixo para atualizar a sua solicitação de chamado.'
+                : 'Preencha os campos abaixo para abrir um chamado operacional ou emergencial para atendimento.'}
+            </p>
           </div>
         </div>
 
@@ -344,6 +394,18 @@ export default function SolicitacaoClient({
                     ))}
                   </select>
                 )}
+              </div>
+
+              {/* Solicitante (Usuário Logado) */}
+              <div className={styles.formGroup}>
+                <label>Solicitante (Usuário Logado)</label>
+                <input
+                  type="text"
+                  value={sessionUser.name}
+                  className={styles.readonlyField}
+                  readOnly
+                  disabled
+                />
               </div>
 
               {/* Data da Abertura (Nativo hoje - Readonly) */}
@@ -472,7 +534,7 @@ export default function SolicitacaoClient({
                 className={styles.btnSubmit}
                 disabled={loading}
               >
-                {loading ? 'Enviando...' : 'Salvar Chamado'}
+                {loading ? 'Salvando...' : (editingRequestId ? 'Salvar Alterações' : 'Salvar Chamado')}
               </button>
             </div>
           </form>
@@ -516,12 +578,13 @@ export default function SolicitacaoClient({
             <thead>
               <tr>
                 <th>Chamado</th>
+                <th>Solicitante</th>
                 <th>Cliente</th>
                 <th>Tipo</th>
                 <th>Classificação / Categoria</th>
-                <th>Data</th>
+                <th>Data e Hora</th>
                 <th>Status</th>
-                {sessionUser.role !== 'CONDOMINIO_EMPRESA' && <th>Ações</th>}
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -533,6 +596,11 @@ export default function SolicitacaoClient({
                     </div>
                     <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '4px', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={req.description}>
                       {req.description}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: '#334155' }}>
+                      {req.openedBy || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não registrado</span>}
                     </div>
                   </td>
                   <td>
@@ -551,7 +619,7 @@ export default function SolicitacaoClient({
                   </td>
                   <td>
                     <span className={styles.dateText}>
-                      {new Date(req.createdAt).toLocaleDateString('pt-BR')}
+                      {formatDateTime(req.createdAt)}
                     </span>
                   </td>
                   <td>
@@ -559,18 +627,29 @@ export default function SolicitacaoClient({
                       {getStatusLabel(req.status)}
                     </span>
                   </td>
-                  {sessionUser.role !== 'CONDOMINIO_EMPRESA' && (
-                    <td>
-                      <div className={styles.actionsCell}>
+                  <td>
+                    <div className={styles.actionsCell}>
+                      {/* Editar: Visível se status for PENDENTE AND (Admin OR o próprio solicitante) */}
+                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id) && (
+                        <button
+                          className={styles.btnEdit}
+                          onClick={() => handleEditClick(req)}
+                        >
+                          Editar
+                        </button>
+                      )}
+
+                      {/* Excluir: Apenas para Administradores / Gestão */}
+                      {sessionUser.role !== 'CONDOMINIO_EMPRESA' && (
                         <button
                           className={styles.btnDelete}
                           onClick={() => handleDelete(req.id)}
                         >
                           Excluir
                         </button>
-                      </div>
-                    </td>
-                  )}
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

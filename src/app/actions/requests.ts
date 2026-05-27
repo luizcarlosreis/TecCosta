@@ -66,6 +66,8 @@ export async function createRequestAction(formData: FormData) {
         categoria,
         subItem: subItem || null,
         observacao: observacao || null,
+        openedBy: sessionUser.name,
+        createdById: sessionUser.id,
         clientId,
         status: 'PENDENTE'
       }
@@ -78,6 +80,73 @@ export async function createRequestAction(formData: FormData) {
   } catch (error) {
     console.error('Error creating maintenance request:', error);
     return { error: 'Ocorreu um erro ao registrar a solicitação de chamado.' };
+  }
+}
+
+export async function updateRequestAction(id: number, formData: FormData) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado. Por favor, realize o login novamente.' };
+  }
+
+  const description = formData.get('description') as string;
+  const tipoChamado = formData.get('tipoChamado') as string;
+  const categoria = formData.get('categoria') as string;
+  const subItem = formData.get('subItem') as string;
+  const observacao = formData.get('observacao') as string;
+  
+  let clientId = formData.get('clientId') as string;
+
+  if (!description || !tipoChamado || !categoria) {
+    return { error: 'Por favor, preencha todos os campos obrigatórios.' };
+  }
+
+  try {
+    const existing = await prisma.maintenanceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return { error: 'Chamado não encontrado.' };
+    }
+
+    // Permitir edição apenas se o status for PENDENTE (não classificado/atendido ainda)
+    if (existing.status !== 'PENDENTE') {
+      return { error: 'Este chamado já foi classificado/atendido e não pode mais ser editado.' };
+    }
+
+    // Validar quem é o solicitante (se não for admin, deve ser quem abriu o chamado!)
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+      if (existing.createdById !== sessionUser.id) {
+        return { error: 'Você não tem permissão para editar um chamado aberto por outro usuário.' };
+      }
+      clientId = existing.clientId;
+    } else {
+      if (!clientId) {
+        return { error: 'Por favor, selecione um Cliente (Condomínio/Empresa).' };
+      }
+    }
+
+    // Atualizar no banco
+    const updated = await prisma.maintenanceRequest.update({
+      where: { id },
+      data: {
+        description,
+        tipoChamado,
+        categoria,
+        subItem: subItem || null,
+        observacao: observacao || null,
+        clientId
+      }
+    });
+
+    console.log('Chamado atualizado com sucesso:', updated.id);
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error updating maintenance request:', error);
+    return { error: 'Ocorreu um erro ao atualizar a solicitação de chamado.' };
   }
 }
 
