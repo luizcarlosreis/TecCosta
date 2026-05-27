@@ -11,10 +11,11 @@ datasource db {
 }
 
 enum Role {
-  ADMINISTRADOR
-  CLIENTE
-  GESTOR
+  CONDOMINIO_EMPRESA
   TECNICO
+  TECCOSTA_GESTAO
+  ADMINISTRADOR
+  ADMINISTRADORA_CONDOMINIO
 }
 
 enum RequestStatus {
@@ -29,9 +30,13 @@ model User {
   cpfCnpj   String   @unique
   name      String
   password  String
-  role      Role     @default(CLIENTE)
+  role      Role     @default(CONDOMINIO_EMPRESA)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  birthDate String?
+  phone     String?
+  subRole   String?
 
   // Relations
   managedClients Client[] @relation("ClientManager")

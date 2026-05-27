@@ -22,6 +22,7 @@ export default function DashboardLayout({
     { name: 'Clientes', href: '/dashboard/clientes', icon: '👥' },
     { name: 'Técnicos', href: '/dashboard/tecnicos', icon: '🛠️' },
     { name: 'Solicitações', href: '/dashboard/solicitacoes', icon: '📝' },
+    { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
   ];
 
   return (
