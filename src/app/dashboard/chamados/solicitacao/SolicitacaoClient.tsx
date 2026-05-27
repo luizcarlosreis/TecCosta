@@ -321,7 +321,8 @@ export default function SolicitacaoClient({
   };
 
   // Formatador de data e hora do chamado solicitado
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return '—';
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
