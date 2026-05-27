@@ -94,7 +94,7 @@ export default function DashboardLayout({
           padding: 20px 0;
           transition: all 0.3s;
           position: relative;
-          z-index: 100;
+          z-index: 200;
         }
 
         .sidebar-header {
@@ -225,6 +225,8 @@ export default function DashboardLayout({
           flex: 1;
           padding: 40px;
           overflow-y: auto;
+          position: relative;
+          z-index: 100;
         }
       `}</style>
     </div>
