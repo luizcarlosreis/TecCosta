@@ -409,3 +409,56 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
     return { error: 'Erro ao atualizar o chamado.' };
   }
 }
+
+export async function finalizeRequestAction(id: number, formData: FormData) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado. Por favor, realize o login novamente.' };
+  }
+
+  // Apenas Administradores, TecCosta Gestão e Técnicos podem finalizar chamados
+  if (sessionUser.role !== 'ADMINISTRADOR' && sessionUser.role !== 'TECCOSTA_GESTAO' && sessionUser.role !== 'TECNICO') {
+    return { error: 'Você não tem permissão para finalizar chamados.' };
+  }
+
+  const finishedAtStr = formData.get('finishedAt') as string;
+  const finalObservacao = formData.get('finalObservacao') as string;
+
+  if (!finishedAtStr) {
+    return { error: 'A data e hora do atendimento real é obrigatória.' };
+  }
+
+  try {
+    const existing = await prisma.maintenanceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return { error: 'Chamado não encontrado.' };
+    }
+
+    const finishedAt = new Date(finishedAtStr);
+    if (isNaN(finishedAt.getTime())) {
+      return { error: 'Data/hora de atendimento real inválida.' };
+    }
+
+    await prisma.maintenanceRequest.update({
+      where: { id },
+      data: {
+        status: 'CONCLUIDO',
+        finishedAt,
+        finishedBy: sessionUser.name,
+        finalObservacao: finalObservacao || null
+      }
+    });
+
+    console.log(`Chamado #${id} finalizado por ${sessionUser.name}`);
+    revalidatePath('/dashboard/chamados/acompanhamento-chamado');
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error finalizing request:', error);
+    return { error: 'Ocorreu um erro ao finalizar o chamado.' };
+  }
+}

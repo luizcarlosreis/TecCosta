@@ -91,6 +91,9 @@ model MaintenanceRequest {
   classifiedById    String?       // ID de quem classificou
   classifiedAt      DateTime?     // Data/hora da classificação
   dataAtendimento   DateTime?     // Data prevista de atendimento
+  finishedAt        DateTime?     // Data/hora do atendimento real (finalização)
+  finishedBy        String?       // Quem finalizou o chamado
+  finalObservacao   String?       // Observações de encerramento
   status            RequestStatus @default(PENDENTE)
   clientId          String
   client            Client        @relation(fields: [clientId], references: [id])
