@@ -279,24 +279,6 @@ export async function classifyRequestAction(id: number, formData: FormData) {
 
     const now = new Date();
 
-    // Calcular data de atendimento automaticamente conforme o nível
-    let dataAtendimento: Date;
-    if (nivelCriticidade === '4') {
-      // Nível 4: data informada manualmente pelo classificador
-      if (!dataAtendimentoStr) {
-        return { error: 'Para o Nível 4 (Agendado), informe a data de atendimento.' };
-      }
-      dataAtendimento = new Date(dataAtendimentoStr);
-      if (isNaN(dataAtendimento.getTime())) {
-        return { error: 'Data de atendimento inválida.' };
-      }
-    } else {
-      // Calcular automaticamente
-      const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
-      const horas = horasMap[nivelCriticidade];
-      dataAtendimento = new Date(now.getTime() + horas * 60 * 60 * 1000);
-    }
-
     await prisma.maintenanceRequest.update({
       where: { id },
       data: {
@@ -304,7 +286,6 @@ export async function classifyRequestAction(id: number, formData: FormData) {
         classifiedBy: sessionUser.name,
         classifiedById: sessionUser.id,
         classifiedAt: now,
-        dataAtendimento,
         status: 'EM_ANDAMENTO'
       }
     });

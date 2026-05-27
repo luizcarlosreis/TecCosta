@@ -72,7 +72,8 @@
 
 .tableContainer {
   border-radius: var(--border-radius);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--box-shadow);
   border: 1px solid rgba(226, 232, 240, 0.8);
 }
@@ -81,6 +82,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 1300px;
 }
 
 .dataTable th {

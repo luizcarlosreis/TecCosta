@@ -25,12 +25,58 @@ interface SerializedRequest {
   status: string;
   createdAt: string;
   client: SerializedClient;
+  technician: { id: string; name: string } | null;
 }
 
 interface ClassificacaoClientProps {
   pendingRequests: SerializedRequest[];
   sessionUser: { id: string; name: string; role: string };
 }
+
+const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  '1': { label: 'N1 – Emergencial', color: '#dc2626', bg: '#fee2e2' },
+  '2': { label: 'N2 – Urgente',     color: '#d97706', bg: '#fef3c7' },
+  '3': { label: 'N3 – Programado',  color: '#0369a1', bg: '#e0f2fe' },
+  '4': { label: 'N4 – Agendado',    color: '#7c3aed', bg: '#ede9fe' },
+};
+
+function getPrazoFinal(req: SerializedRequest): string | null {
+  if (!req.classifiedAt || !req.nivelCriticidade) return null;
+  const classifiedDate = new Date(req.classifiedAt);
+  if (req.nivelCriticidade === '1') {
+    return new Date(classifiedDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '2') {
+    return new Date(classifiedDate.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '3') {
+    return new Date(classifiedDate.getTime() + 72 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '4') {
+    return req.dataAtendimento;
+  }
+  return null;
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'PENDENTE': return 'Pendente';
+    case 'EM_ANDAMENTO': return 'Em Andamento';
+    case 'CONCLUIDO': return 'Concluído';
+    case 'CANCELADO': return 'Cancelado';
+    default: return status;
+  }
+};
+
+const getStatusClass = (status: string) => {
+  switch (status) {
+    case 'PENDENTE': return styles.statusPending;
+    case 'EM_ANDAMENTO': return styles.statusInProgress;
+    case 'CONCLUIDO': return styles.statusCompleted;
+    case 'CANCELADO': return styles.statusCancelled;
+    default: return '';
+  }
+};
 
 // Definições dos níveis de criticidade
 const NIVEIS = {
@@ -176,9 +222,6 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     try {
       const formData = new FormData();
       formData.append('nivelCriticidade', nivelCriticidade);
-      if (nivelCriticidade === '4') {
-        formData.append('dataAtendimento', dataAtendimentoManual);
-      }
 
       const result = await classifyRequestAction(selectedRequest.id, formData);
 
@@ -332,33 +375,16 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                 </div>
               )}
 
-              {/* Data de Atendimento */}
-              {nivelCriticidade && nivelCriticidade !== '4' && dataCalculada && (
+              {/* Prazo Final (SLA) */}
+              {nivelCriticidade && (
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label>Data Prevista de Atendimento (calculada automaticamente)</label>
+                  <label>Prazo Final de Atendimento (SLA)</label>
                   <input
                     type="text"
-                    value={formatDateTimeCalc(dataCalculada)}
-                    className={`${styles.readonlyField} ${styles.dataAtendimentoCalc}`}
+                    value={nivelCriticidade === '4' ? 'A definir (definido durante o agendamento)' : dataCalculada ? formatDateTimeCalc(dataCalculada) : '—'}
+                    className={`${styles.readonlyField} ${nivelCriticidade !== '4' ? styles.dataAtendimentoCalc : ''}`}
                     readOnly
                     disabled
-                  />
-                </div>
-              )}
-
-              {nivelCriticidade === '4' && (
-                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label htmlFor="dataAtendimento">
-                    Data de Atendimento Agendada <span className={styles.required}>*</span>
-                  </label>
-                  <input
-                    type="date"
-                    id="dataAtendimento"
-                    value={dataAtendimentoManual}
-                    onChange={(e) => setDataAtendimentoManual(e.target.value)}
-                    required
-                    disabled={loading}
-                    min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
               )}
@@ -464,57 +490,103 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                 <th>Chamado</th>
                 <th>Solicitante</th>
                 <th>Cliente</th>
-                <th>Tipo</th>
-                <th>Categoria / Sub-item</th>
-                <th>Data e Hora</th>
-                {isAdmin && <th>Ações</th>}
+                <th>Tipo / Nível</th>
+                <th>Categoria</th>
+                <th>Data Abertura</th>
+                <th>Prazo Final (SLA)</th>
+                <th>Data Agendada</th>
+                <th>Técnico</th>
+                <th>Status</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRequests.map((req) => (
-                <tr key={req.id} className={styles.rowHover}>
-                  <td>
-                    <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
-                      #{String(req.id).padStart(3, '0')}
-                    </div>
-                    <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '4px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={req.description}>
-                      {req.description}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#334155' }}>
-                      {req.openedBy || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não registrado</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.clientText}>{req.client.name}</span>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
-                      {req.tipoChamado}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={styles.categoryLabel}>{req.categoria}</span>
-                    {req.subItem && (
-                      <span className={styles.subItemLabel}>{req.subItem}</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
-                  </td>
-                  {isAdmin && (
+              {filteredRequests.map((req) => {
+                const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
+                const prazoFinal = getPrazoFinal(req);
+                return (
+                  <tr key={req.id} className={styles.rowHover}>
                     <td>
-                      <button
-                        className={styles.btnClassificar}
-                        onClick={() => handleClassificarClick(req)}
-                      >
-                        🗂️ Classificar
-                      </button>
+                      <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
+                        #{String(req.id).padStart(3, '0')}
+                      </div>
+                      <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '4px', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={req.description}>
+                        {req.description}
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#334155' }}>
+                        {req.openedBy || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não registrado</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={styles.clientText}>{req.client.name}</span>
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
+                        {req.tipoChamado}
+                      </span>
+                      {nivel && (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
+                            {nivel.label}
+                          </span>
+                        </div>
+                      )}
+                      {!nivel && (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={styles.nivelBadgeEmpty}>Sem nível</span>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.categoryLabel}>{req.categoria}</span>
+                      {req.subItem && (
+                        <span className={styles.subItemLabel}>{req.subItem}</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.dateText}>
+                        {formatDateTime(req.createdAt)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
+                        {formatDateTime(prazoFinal)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
+                        {formatDateTime(req.dataAtendimento)}
+                      </span>
+                    </td>
+                    <td>
+                      {req.technician ? (
+                        <span className={styles.technicianName}>{req.technician.name}</span>
+                      ) : (
+                        <span className={styles.unassigned}>Não atribuído</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
+                        {getStatusLabel(req.status)}
+                      </span>
+                    </td>
+                    <td>
+                      {isAdmin ? (
+                        <button
+                          className={styles.btnClassificar}
+                          onClick={() => handleClassificarClick(req)}
+                        >
+                          🗂️ Classificar
+                        </button>
+                      ) : (
+                        <span className={styles.unassigned}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -36,7 +36,7 @@ export default async function ClassificacaoPage() {
         nivelCriticidade: null,
         clientId: { in: clientIds }
       },
-      include: { client: true },
+      include: { client: true, technician: true },
       orderBy: { createdAt: 'asc' } // Mais antigos primeiro (prioridade)
     });
   } else {
@@ -46,7 +46,7 @@ export default async function ClassificacaoPage() {
         status: 'PENDENTE',
         nivelCriticidade: null
       },
-      include: { client: true },
+      include: { client: true, technician: true },
       orderBy: { createdAt: 'asc' } // Mais antigos primeiro (prioridade)
     });
   }

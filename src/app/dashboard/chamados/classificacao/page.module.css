@@ -243,7 +243,8 @@
 
 .tableContainer {
   border-radius: var(--border-radius);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--box-shadow);
   border: 1px solid rgba(226, 232, 240, 0.8);
 }
@@ -252,6 +253,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 1300px;
 }
 
 .dataTable th {
@@ -534,4 +536,71 @@
   .requestInfoFull {
     grid-column: span 2;
   }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.statusPending {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.statusInProgress {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.statusCompleted {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.statusCancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.nivelBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.nivelBadgeEmpty {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.technicianName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #1e40af;
+  background: #eff6ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.unassigned {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.85rem;
 }
