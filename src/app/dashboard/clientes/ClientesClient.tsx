@@ -216,8 +216,8 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <div>
-          <h1>Cadastro de Clientes</h1>
-          <p>Cadastre e gerencie as empresas e condomínios atendidos pela TecCosta.</p>
+          <h1>Cadastrar Novo Cliente</h1>
+          <p>Preencha os campos abaixo para registrar um condomínio ou empresa cliente.</p>
         </div>
         <button className={styles.btnAdd} onClick={() => setIsModalOpen(true)}>
           <span>➕</span> Novo Cliente

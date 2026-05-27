@@ -101,6 +101,9 @@ export default function LoginPage() {
           
           <div className={styles.loginFooter}>
             <a href="#">Esqueceu sua senha?</a>
+            <div className={styles.loginVersion}>
+              v{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}
+            </div>
           </div>
         </div>
       </main>

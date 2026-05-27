@@ -144,3 +144,11 @@
 .loginFooter a:hover {
   color: var(--secondary-color);
 }
+
+.loginVersion {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 15px;
+  font-family: monospace;
+  letter-spacing: 0.05em;
+}

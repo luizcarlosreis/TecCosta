@@ -21,7 +21,6 @@ export default function DashboardLayout({
     { name: 'Início', href: '/dashboard', icon: '🏠' },
     { name: 'Clientes', href: '/dashboard/clientes', icon: '👥' },
     { name: 'Técnicos', href: '/dashboard/tecnicos', icon: '🛠️' },
-    { name: 'Solicitações', href: '/dashboard/solicitacoes', icon: '📝' },
     { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
   ];
 
@@ -57,6 +56,9 @@ export default function DashboardLayout({
             <span className="icon">🚪</span>
             <span className="label">Sair</span>
           </button>
+          <div className="app-version">
+            v{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}
+          </div>
         </div>
       </aside>
 
@@ -136,8 +138,17 @@ export default function DashboardLayout({
         }
 
         .sidebar-footer {
-          padding: 20px 12px 0;
+          padding: 20px 12px 10px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .app-version {
+          font-size: 0.7rem;
+          color: rgba(255, 255, 255, 0.35);
+          text-align: center;
+          margin-top: 12px;
+          font-family: monospace;
+          letter-spacing: 0.05em;
         }
 
         .logout-btn {
