@@ -20,7 +20,7 @@ export default async function SolicitacaoPage() {
   }
 
   // 1. Carregar chamados/solicitações correspondentes
-  let requests = [];
+  let requests: any[] = [];
   if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
     // Filtrar chamados vinculados ao gestor logado
     const managedClients = await prisma.client.findMany({
@@ -49,7 +49,7 @@ export default async function SolicitacaoPage() {
   });
 
   // 3. Carregar o condomínio/empresa específico do gestor logado
-  let userClients = [];
+  let userClients: { id: string; name: string }[] = [];
   if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
     userClients = await prisma.client.findMany({
       where: { managers: { some: { id: sessionUser.id } } },
