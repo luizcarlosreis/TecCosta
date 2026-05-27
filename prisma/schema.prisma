@@ -46,17 +46,22 @@ model User {
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  name      String
-  cnpj      String   @unique
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  clientCode Int      @unique @default(autoincrement())
+  name       String
+  cnpj       String   @unique
+  phone      String?
+  cep        String?
+  rua        String?
+  numero     String?
+  bairro     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  managers  User[]   @relation("ClientManager")
-  contacts  Contact[]
-  requests  MaintenanceRequest[]
+  managers   User[]   @relation("ClientManager")
+  contacts   Contact[]
+  requests   MaintenanceRequest[]
 }
 
 model Contact {
