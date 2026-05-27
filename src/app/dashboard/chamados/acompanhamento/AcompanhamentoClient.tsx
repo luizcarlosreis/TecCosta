@@ -18,6 +18,7 @@ interface SerializedRequest {
   nivelCriticidade: string | null;
   classifiedBy: string | null;
   classifiedAt: string | null;
+  prazoSla: string | null;
   dataAtendimento: string | null;
   status: string;
   createdAt: string;
@@ -297,7 +298,7 @@ export default function AcompanhamentoClient({
                 <label>Prazo Final (SLA)</label>
                 <input
                   type="text"
-                  value={formatDateTime(getPrazoFinal(editingRequest))}
+                  value={formatDateTime(editingRequest.prazoSla)}
                   className={styles.readonlyField}
                   readOnly
                   disabled
@@ -417,7 +418,7 @@ export default function AcompanhamentoClient({
             <tbody>
               {filteredRequests.map((req) => {
                 const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
-                const prazoFinal = getPrazoFinal(req);
+                const prazoFinal = req.prazoSla;
                 return (
                   <tr key={req.id} className={styles.rowHover}>
                     <td>

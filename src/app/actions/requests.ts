@@ -258,7 +258,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
   }
 
   const nivelCriticidade = formData.get('nivelCriticidade') as string;
-  const dataAtendimentoStr = formData.get('dataAtendimento') as string;
+  const prazoSlaStr = formData.get('prazoSla') as string;
 
   if (!nivelCriticidade || !['1', '2', '3', '4'].includes(nivelCriticidade)) {
     return { error: 'Por favor, selecione um nível de criticidade válido.' };
@@ -279,6 +279,21 @@ export async function classifyRequestAction(id: number, formData: FormData) {
 
     const now = new Date();
 
+    let prazoSla: Date;
+    if (nivelCriticidade === '4') {
+      if (!prazoSlaStr) {
+        return { error: 'Para o Nível 4 (Agendado), informe o prazo limite do chamado (SLA).' };
+      }
+      prazoSla = new Date(prazoSlaStr);
+      if (isNaN(prazoSla.getTime())) {
+        return { error: 'Prazo limite (SLA) informado é inválido.' };
+      }
+    } else {
+      const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
+      const horas = horasMap[nivelCriticidade];
+      prazoSla = new Date(now.getTime() + horas * 60 * 60 * 1000);
+    }
+
     await prisma.maintenanceRequest.update({
       where: { id },
       data: {
@@ -286,6 +301,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
         classifiedBy: sessionUser.name,
         classifiedById: sessionUser.id,
         classifiedAt: now,
+        prazoSla,
         status: 'EM_ANDAMENTO'
       }
     });

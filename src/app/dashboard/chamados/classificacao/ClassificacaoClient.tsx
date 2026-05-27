@@ -21,6 +21,7 @@ interface SerializedRequest {
   nivelCriticidade: string | null;
   classifiedBy: string | null;
   classifiedAt: string | null;
+  prazoSla: string | null;
   dataAtendimento: string | null;
   status: string;
   createdAt: string;
@@ -169,7 +170,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
 
   // Campos do formulário de classificação
   const [nivelCriticidade, setNivelCriticidade] = useState('');
-  const [dataAtendimentoManual, setDataAtendimentoManual] = useState('');
+  const [prazoSlaManual, setPrazoSlaManual] = useState('');
 
   // Feedback
   const [loading, setLoading] = useState(false);
@@ -198,7 +199,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     // Pré-selecionar o primeiro nível disponível para o tipo
     const niveisDisponiveis = getNiveisDisponiveis(req.tipoChamado);
     setNivelCriticidade(niveisDisponiveis[0] || '');
-    setDataAtendimentoManual('');
+    setPrazoSlaManual('');
     setError(null);
     setSuccess(null);
     setView('form');
@@ -222,6 +223,14 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     try {
       const formData = new FormData();
       formData.append('nivelCriticidade', nivelCriticidade);
+      if (nivelCriticidade === '4') {
+        if (!prazoSlaManual) {
+          setError('Por favor, informe a data limite de SLA.');
+          setLoading(false);
+          return;
+        }
+        formData.append('prazoSla', prazoSlaManual);
+      }
 
       const result = await classifyRequestAction(selectedRequest.id, formData);
 
@@ -344,7 +353,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                   value={nivelCriticidade}
                   onChange={(e) => {
                     setNivelCriticidade(e.target.value);
-                    setDataAtendimentoManual('');
+                    setPrazoSlaManual('');
                   }}
                   required
                   disabled={loading}
@@ -376,15 +385,30 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
               )}
 
               {/* Prazo Final (SLA) */}
-              {nivelCriticidade && (
+              {nivelCriticidade && nivelCriticidade !== '4' && dataCalculada && (
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label>Prazo Final de Atendimento (SLA)</label>
+                  <label>Prazo Final de Atendimento (SLA - calculado)</label>
                   <input
                     type="text"
-                    value={nivelCriticidade === '4' ? 'A definir (definido durante o agendamento)' : dataCalculada ? formatDateTimeCalc(dataCalculada) : '—'}
-                    className={`${styles.readonlyField} ${nivelCriticidade !== '4' ? styles.dataAtendimentoCalc : ''}`}
+                    value={formatDateTimeCalc(dataCalculada)}
+                    className={`${styles.readonlyField} ${styles.dataAtendimentoCalc}`}
                     readOnly
                     disabled
+                  />
+                </div>
+              )}
+
+              {nivelCriticidade === '4' && (
+                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                  <label htmlFor="prazoSla">Prazo Limite de Atendimento (SLA) <span className={styles.required}>*</span></label>
+                  <input
+                    type="datetime-local"
+                    id="prazoSla"
+                    value={prazoSlaManual}
+                    onChange={(e) => setPrazoSlaManual(e.target.value)}
+                    required
+                    disabled={loading}
+                    min={new Date().toISOString().slice(0, 16)}
                   />
                 </div>
               )}
@@ -503,7 +527,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
             <tbody>
               {filteredRequests.map((req) => {
                 const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
-                const prazoFinal = getPrazoFinal(req);
+                const prazoFinal = req.prazoSla;
                 return (
                   <tr key={req.id} className={styles.rowHover}>
                     <td>

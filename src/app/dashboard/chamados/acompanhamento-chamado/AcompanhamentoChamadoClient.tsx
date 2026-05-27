@@ -18,6 +18,7 @@ interface SerializedRequest {
   nivelCriticidade: string | null;
   classifiedBy: string | null;
   classifiedAt: string | null;
+  prazoSla: string | null;
   dataAtendimento: string | null;
   finishedAt: string | null;
   finishedBy: string | null;
@@ -390,7 +391,7 @@ export default function AcompanhamentoChamadoClient({
                 const serviceSt = getAtendimentoStatus(req);
                 const isScheduled = ticketSt.label === 'Agendado';
                 const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
-                const prazoFinal = getPrazoFinal(req);
+                const prazoFinal = req.prazoSla;
 
                 return (
                   <tr key={req.id} className={styles.rowHover}>

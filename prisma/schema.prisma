@@ -90,6 +90,7 @@ model MaintenanceRequest {
   classifiedBy      String?       // Nome de quem classificou
   classifiedById    String?       // ID de quem classificou
   classifiedAt      DateTime?     // Data/hora da classificação
+  prazoSla          DateTime?     // Prazo limite (SLA)
   dataAtendimento   DateTime?     // Data prevista de atendimento
   finishedAt        DateTime?     // Data/hora do atendimento real (finalização)
   finishedBy        String?       // Quem finalizou o chamado
