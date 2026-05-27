@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { logoutAction } from '@/app/actions/auth';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,6 +13,43 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  // Dados do usuário logado lidos do cookie de sessão
+  const [sessionUser, setSessionUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find((c) => c.trim().startsWith('teccosta-session='));
+      if (sessionCookie) {
+        const value = decodeURIComponent(sessionCookie.split('=').slice(1).join('='));
+        const parsed = JSON.parse(value) as { id: string; name: string; role: string };
+        setSessionUser(parsed);
+      }
+    } catch (e) {
+      // Silencia erros de parsing
+    }
+  }, []);
+
+  // Gera as iniciais a partir do nome completo
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Rótulo amigável do role
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'ADMINISTRADOR': return 'Administrador';
+      case 'TECCOSTA_GESTAO': return 'TecCosta Gestão';
+      case 'CONDOMINIO_EMPRESA': return 'Gestor';
+      case 'TECNICO': return 'Técnico';
+      case 'ADMINISTRADORA_CONDOMINIO': return 'Administradora';
+      case 'CLIENTE': return 'Cliente';
+      default: return role;
+    }
+  };
 
   const handleLogout = async () => {
     await logoutAction();
@@ -67,10 +105,12 @@ export default function DashboardLayout({
         <header className="dashboard-header glass">
           <div className="header-user">
             <div className="user-info">
-              <p className="user-name">Administrador</p>
-              <p className="user-role">Admin</p>
+              <p className="user-name">{sessionUser ? sessionUser.name : '...'}</p>
+              <p className="user-role">{sessionUser ? getRoleLabel(sessionUser.role) : ''}</p>
             </div>
-            <div className="user-avatar">AD</div>
+            <div className="user-avatar">
+              {sessionUser ? getInitials(sessionUser.name) : '??'}
+            </div>
           </div>
         </header>
         
