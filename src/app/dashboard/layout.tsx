@@ -20,7 +20,6 @@ export default function DashboardLayout({
   const menuItems = [
     { name: 'Início', href: '/dashboard', icon: '🏠' },
     { name: 'Clientes', href: '/dashboard/clientes', icon: '👥' },
-    { name: 'Técnicos', href: '/dashboard/tecnicos', icon: '🛠️' },
     { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
   ];
 
