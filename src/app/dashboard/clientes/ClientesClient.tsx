@@ -67,7 +67,7 @@ const getManagerRoleLabel = (user: SerializedUser) => {
 export default function ClientesClient({ initialClients, eligibleManagers }: ClientesClientProps) {
   const [clients, setClients] = useState<SerializedClient[]>(initialClients);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'form'>('list');
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
   // Form states
@@ -108,8 +108,23 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
     setPhone(formatPhone(e.target.value));
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleNewClick = () => {
+    setEditingClientId(null);
+    setName('');
+    setCnpj('');
+    setPhone('');
+    setCep('');
+    setRua('');
+    setNumero('');
+    setBairro('');
+    setSelectedManagerIds([]);
+    setError(null);
+    setSuccess(null);
+    setView('form');
+  };
+
+  const handleCloseForm = () => {
+    setView('list');
     setEditingClientId(null);
     setName('');
     setCnpj('');
@@ -133,7 +148,9 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
     setNumero(client.numero || '');
     setBairro(client.bairro || '');
     setSelectedManagerIds(client.managers.map((m) => m.id));
-    setIsModalOpen(true);
+    setError(null);
+    setSuccess(null);
+    setView('form');
   };
 
   const handleCheckboxChange = (managerId: string) => {
@@ -185,7 +202,7 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
         }
 
         setTimeout(() => {
-          handleCloseModal();
+          handleCloseForm();
         }, 1500);
       }
     } catch (err) {
@@ -212,14 +229,189 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
     }
   };
 
+  if (view === 'form') {
+    return (
+      <div className={styles.pageContainer}>
+        <button className={styles.backBtn} onClick={handleCloseForm}>
+          ← Voltar para a lista
+        </button>
+
+        <div className={styles.pageHeader}>
+          <div>
+            <h1>{editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h1>
+            <p>
+              {editingClientId
+                ? 'Edite as informações abaixo para atualizar os dados do cliente.'
+                : 'Preencha os campos abaixo para registrar um condomínio ou empresa cliente.'}
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {success && (
+          <div className={`${styles.feedbackMessage} ${styles.feedbackSuccess}`}>
+            ✓ {success}
+          </div>
+        )}
+
+        <div className={styles.formCard}>
+          <form onSubmit={handleSubmit}>
+            <div className={styles.formGrid}>
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label htmlFor="clientName">
+                  Nome do Condomínio / Empresa <span className={styles.required}>*</span>
+                </label>
+                <input
+                  type="text"
+                  id="clientName"
+                  placeholder="Ex: Condomínio Residencial Aurora"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientCnpj">
+                  CNPJ <span className={styles.required}>*</span>
+                </label>
+                <input
+                  type="text"
+                  id="clientCnpj"
+                  placeholder="00.000.000/0000-00"
+                  value={cnpj}
+                  onChange={handleCnpjChange}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientPhone">Telefone de Contato</label>
+                <input
+                  type="text"
+                  id="clientPhone"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientCep">CEP</label>
+                <input
+                  type="text"
+                  id="clientCep"
+                  placeholder="00000-000"
+                  value={cep}
+                  onChange={handleCepChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientRua">Rua / Logradouro</label>
+                <input
+                  type="text"
+                  id="clientRua"
+                  placeholder="Ex: Av. Atlântica"
+                  value={rua}
+                  onChange={(e) => setRua(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientNumero">Número</label>
+                <input
+                  type="text"
+                  id="clientNumero"
+                  placeholder="Ex: 1200"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="clientBairro">Bairro</label>
+                <input
+                  type="text"
+                  id="clientBairro"
+                  placeholder="Ex: Centro"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label>Vincular Responsáveis (Síndico, Zelador ou Administradora)</label>
+                {eligibleManagers.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', padding: '10px 0' }}>
+                    Nenhum gestor com perfil "Condomínio/Empresa" ou "Administradora" cadastrado ainda.
+                  </div>
+                ) : (
+                  <div className={styles.managersChecklist}>
+                    {eligibleManagers.map((manager) => (
+                      <label key={manager.id} className={styles.checkItem}>
+                        <input
+                          type="checkbox"
+                          checked={selectedManagerIds.includes(manager.id)}
+                          onChange={() => handleCheckboxChange(manager.id)}
+                          disabled={loading}
+                        />
+                        <div className={styles.checkItemText}>
+                          <span className={styles.checkItemName}>{manager.name}</span>
+                          <span className={styles.checkItemRole}>
+                            {getManagerRoleLabel(manager)} (CPF: {manager.cpfCnpj})
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.btnCancel}
+                onClick={handleCloseForm}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className={styles.btnSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Salvando...' : (editingClientId ? 'Salvar Alterações' : 'Salvar Cliente')}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <div>
-          <h1>Cadastrar Novo Cliente</h1>
-          <p>Preencha os campos abaixo para registrar um condomínio ou empresa cliente.</p>
+          <h1>Cadastro de Clientes</h1>
+          <p>Cadastre e gerencie as empresas e condomínios atendidos pela TecCosta.</p>
         </div>
-        <button className={styles.btnAdd} onClick={() => setIsModalOpen(true)}>
+        <button className={styles.btnAdd} onClick={handleNewClick}>
           <span>➕</span> Novo Cliente
         </button>
       </div>
@@ -307,171 +499,6 @@ export default function ClientesClient({ initialClients, eligibleManagers }: Cli
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent + ' glass'}>
-            <h2>{editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
-            <p className={styles.modalSubtitle}>
-              {editingClientId
-                ? 'Edite as informações abaixo para atualizar os dados do cliente.'
-                : 'Preencha os campos abaixo para registrar um condomínio ou empresa cliente.'}
-            </p>
-
-            {error && (
-              <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            {success && (
-              <div className={`${styles.feedbackMessage} ${styles.feedbackSuccess}`}>
-                ✓ {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <div className={styles.formGrid}>
-                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label htmlFor="clientName">
-                    Nome do Condomínio / Empresa <span className={styles.required}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="clientName"
-                    placeholder="Ex: Condomínio Residencial Aurora"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientCnpj">
-                    CNPJ <span className={styles.required}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="clientCnpj"
-                    placeholder="00.000.000/0000-00"
-                    value={cnpj}
-                    onChange={handleCnpjChange}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientPhone">Telefone de Contato</label>
-                  <input
-                    type="text"
-                    id="clientPhone"
-                    placeholder="(00) 00000-0000"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientCep">CEP</label>
-                  <input
-                    type="text"
-                    id="clientCep"
-                    placeholder="00000-000"
-                    value={cep}
-                    onChange={handleCepChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientRua">Rua / Logradouro</label>
-                  <input
-                    type="text"
-                    id="clientRua"
-                    placeholder="Ex: Av. Atlântica"
-                    value={rua}
-                    onChange={(e) => setRua(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientNumero">Número</label>
-                  <input
-                    type="text"
-                    id="clientNumero"
-                    placeholder="Ex: 1200"
-                    value={numero}
-                    onChange={(e) => setNumero(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="clientBairro">Bairro</label>
-                  <input
-                    type="text"
-                    id="clientBairro"
-                    placeholder="Ex: Centro"
-                    value={bairro}
-                    onChange={(e) => setBairro(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label>Vincular Responsáveis (Síndico, Zelador ou Administradora)</label>
-                  {eligibleManagers.length === 0 ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', padding: '10px 0' }}>
-                      Nenhum gestor com perfil "Condomínio/Empresa" ou "Administradora" cadastrado ainda.
-                    </div>
-                  ) : (
-                    <div className={styles.managersChecklist}>
-                      {eligibleManagers.map((manager) => (
-                        <label key={manager.id} className={styles.checkItem}>
-                          <input
-                            type="checkbox"
-                            checked={selectedManagerIds.includes(manager.id)}
-                            onChange={() => handleCheckboxChange(manager.id)}
-                            disabled={loading}
-                          />
-                          <div className={styles.checkItemText}>
-                            <span className={styles.checkItemName}>{manager.name}</span>
-                            <span className={styles.checkItemRole}>
-                              {getManagerRoleLabel(manager)} (CPF: {manager.cpfCnpj})
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.btnCancel}
-                  onClick={handleCloseModal}
-                  disabled={loading}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className={styles.btnSubmit}
-                  disabled={loading}
-                >
-                  {loading ? 'Salvando...' : (editingClientId ? 'Salvar Alterações' : 'Salvar Cliente')}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
