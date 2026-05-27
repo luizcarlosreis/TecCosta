@@ -629,8 +629,8 @@ export default function SolicitacaoClient({
                   </td>
                   <td>
                     <div className={styles.actionsCell}>
-                      {/* Editar: Visível se status for PENDENTE AND (Admin OR o próprio solicitante) */}
-                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id) && (
+                      {/* Editar: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
+                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
                         <button
                           className={styles.btnEdit}
                           onClick={() => handleEditClick(req)}
@@ -639,8 +639,8 @@ export default function SolicitacaoClient({
                         </button>
                       )}
 
-                      {/* Excluir: Apenas para Administradores / Gestão */}
-                      {sessionUser.role !== 'CONDOMINIO_EMPRESA' && (
+                      {/* Excluir: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
+                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
                         <button
                           className={styles.btnDelete}
                           onClick={() => handleDelete(req.id)}

@@ -117,8 +117,17 @@ export async function updateRequestAction(id: number, formData: FormData) {
 
     // Validar quem é o solicitante (se não for admin, deve ser quem abriu o chamado!)
     if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
-      if (existing.createdById !== sessionUser.id) {
-        return { error: 'Você não tem permissão para editar um chamado aberto por outro usuário.' };
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+      const clientIds = managedClients.map(c => c.id);
+
+      const isAuthorized = existing.createdById === sessionUser.id || 
+                           (existing.createdById === null && clientIds.includes(existing.clientId));
+
+      if (!isAuthorized) {
+        return { error: 'Você não tem permissão para editar este chamado.' };
       }
       clientId = existing.clientId;
     } else {
@@ -192,11 +201,40 @@ export async function getRequestsAction() {
 
 export async function deleteRequestAction(id: number) {
   const sessionUser = await getSessionUser();
-  if (!sessionUser || sessionUser.role === 'CONDOMINIO_EMPRESA') {
-    return { error: 'Não autorizado para excluir chamados.' };
+  if (!sessionUser) {
+    return { error: 'Não autorizado.' };
   }
 
   try {
+    const existing = await prisma.maintenanceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return { error: 'Chamado não encontrado.' };
+    }
+
+    // Permitir exclusão apenas se for PENDENTE (não classificado/atendido ainda)
+    if (existing.status !== 'PENDENTE') {
+      return { error: 'Este chamado já foi classificado/atendido e não pode mais ser excluído.' };
+    }
+
+    // Validar quem é o solicitante (se for gestor, deve ser quem abriu o chamado ou ter acesso ao cliente!)
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+      const clientIds = managedClients.map(c => c.id);
+
+      const isAuthorized = existing.createdById === sessionUser.id || 
+                           (existing.createdById === null && clientIds.includes(existing.clientId));
+
+      if (!isAuthorized) {
+        return { error: 'Você não tem permissão para excluir este chamado.' };
+      }
+    }
+
     await prisma.maintenanceRequest.delete({
       where: { id }
     });
