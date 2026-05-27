@@ -67,7 +67,7 @@ const getAvatarBg = (role: string) => {
 export default function UsersClient({ initialUsers }: UsersClientProps) {
   const [users, setUsers] = useState<SerializedUser[]>(initialUsers);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'form'>('list');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   // Form states
@@ -107,8 +107,22 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
     setPhone(formatPhone(e.target.value));
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleNewClick = () => {
+    setEditingUserId(null);
+    setName('');
+    setCpfCnpj('');
+    setBirthDate('');
+    setPhone('');
+    setPassword('');
+    setRole('CONDOMINIO_EMPRESA');
+    setSubRole('Síndico');
+    setError(null);
+    setSuccess(null);
+    setView('form');
+  };
+
+  const handleCloseForm = () => {
+    setView('list');
     setEditingUserId(null);
     setName('');
     setCpfCnpj('');
@@ -130,7 +144,9 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
     setPassword(''); // Em branco ao editar para indicar que é opcional
     setRole(user.role);
     setSubRole(user.subRole || 'Síndico');
-    setIsModalOpen(true);
+    setError(null);
+    setSuccess(null);
+    setView('form');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,7 +195,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
         }
 
         setTimeout(() => {
-          handleCloseModal();
+          handleCloseForm();
         }, 1500);
       }
     } catch (err) {
@@ -217,6 +233,170 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
     }
   };
 
+  if (view === 'form') {
+    return (
+      <div className={styles.pageContainer}>
+        <button className={styles.backBtn} onClick={handleCloseForm}>
+          ← Voltar para a lista
+        </button>
+
+        <div className={styles.pageHeader}>
+          <div>
+            <h1>{editingUserId ? 'Editar Usuário' : 'Cadastrar Novo Usuário'}</h1>
+            <p>
+              {editingUserId
+                ? 'Edite os campos abaixo para atualizar as informações do usuário no sistema.'
+                : 'Preencha os campos abaixo para registrar um usuário no sistema.'}
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {success && (
+          <div className={`${styles.feedbackMessage} ${styles.feedbackSuccess}`}>
+            ✓ {success}
+          </div>
+        )}
+
+        <div className={styles.formCard}>
+          <form onSubmit={handleSubmit}>
+            <div className={styles.formGrid}>
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label htmlFor="name">
+                  Nome Completo <span className={styles.required}>*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  placeholder="Ex: Luiz Carlos Reis"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="cpfCnpj">
+                  CPF <span className={styles.required}>*</span>
+                </label>
+                <input
+                  type="text"
+                  id="cpfCnpj"
+                  placeholder="000.000.000-00"
+                  value={cpfCnpj}
+                  onChange={handleCpfChange}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="password">
+                  Senha de Acesso {!editingUserId && <span className={styles.required}>*</span>}
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder={editingUserId ? "Deixe em branco para manter a atual" : "••••••••"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={!editingUserId}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="birthDate">Data de Nascimento</label>
+                <input
+                  type="text"
+                  id="birthDate"
+                  placeholder="DD/MM/AAAA"
+                  value={birthDate}
+                  onChange={handleBirthDateChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="phone">Telefone</label>
+                <input
+                  type="text"
+                  id="phone"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="role">
+                  Perfil de Acesso <span className={styles.required}>*</span>
+                </label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  required
+                  disabled={loading}
+                >
+                  <option value="CONDOMINIO_EMPRESA">Condomínio/Empresa</option>
+                  <option value="TECNICO">Técnico</option>
+                  <option value="TECCOSTA_GESTAO">TecCosta (Gestão)</option>
+                  <option value="ADMINISTRADOR">Administrador</option>
+                  <option value="ADMINISTRADORA_CONDOMINIO">Administradora do Condomínio</option>
+                </select>
+              </div>
+
+              {role === 'CONDOMINIO_EMPRESA' && (
+                <div className={styles.formGroup}>
+                  <label htmlFor="subRole">
+                    Função no Condomínio <span className={styles.required}>*</span>
+                  </label>
+                  <select
+                     id="subRole"
+                     value={subRole}
+                     onChange={(e) => setSubRole(e.target.value)}
+                     required
+                     disabled={loading}
+                  >
+                    <option value="Síndico">Síndico</option>
+                    <option value="Zelador">Zelador</option>
+                    <option value="Conselheiro">Conselheiro</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.btnCancel}
+                onClick={handleCloseForm}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className={styles.btnSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Salvando...' : (editingUserId ? 'Salvar Alterações' : 'Cadastrar Usuário')}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
@@ -224,7 +404,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
           <h1>Gestão de Usuários</h1>
           <p>Cadastre e administre as contas de acesso ao portal TecCosta.</p>
         </div>
-        <button className={styles.btnAdd} onClick={() => setIsModalOpen(true)}>
+        <button className={styles.btnAdd} onClick={handleNewClick}>
           <span>➕</span> Novo Usuário
         </button>
       </div>
@@ -317,160 +497,6 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent + ' glass'}>
-            <h2>{editingUserId ? 'Editar Usuário' : 'Cadastrar Novo Usuário'}</h2>
-            <p className={styles.modalSubtitle}>
-              {editingUserId
-                ? 'Edite os campos abaixo para atualizar as informações do usuário no sistema.'
-                : 'Preencha os campos abaixo para registrar um usuário no sistema.'}
-            </p>
-
-            {error && (
-              <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            {success && (
-              <div className={`${styles.feedbackMessage} ${styles.feedbackSuccess}`}>
-                ✓ {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <div className={styles.formGrid}>
-                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label htmlFor="name">
-                    Nome Completo <span className={styles.required}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    placeholder="Ex: Luiz Carlos Reis"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="cpfCnpj">
-                    CPF <span className={styles.required}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="cpfCnpj"
-                    placeholder="000.000.000-00"
-                    value={cpfCnpj}
-                    onChange={handleCpfChange}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="password">
-                    Senha de Acesso {!editingUserId && <span className={styles.required}>*</span>}
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    placeholder={editingUserId ? "Deixe em branco para manter a atual" : "••••••••"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required={!editingUserId}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="birthDate">Data de Nascimento</label>
-                  <input
-                    type="text"
-                    id="birthDate"
-                    placeholder="DD/MM/AAAA"
-                    value={birthDate}
-                    onChange={handleBirthDateChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="phone">Telefone</label>
-                  <input
-                    type="text"
-                    id="phone"
-                    placeholder="(00) 00000-0000"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="role">
-                    Perfil de Acesso <span className={styles.required}>*</span>
-                  </label>
-                  <select
-                    id="role"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    required
-                    disabled={loading}
-                  >
-                    <option value="CONDOMINIO_EMPRESA">Condomínio/Empresa</option>
-                    <option value="TECNICO">Técnico</option>
-                    <option value="TECCOSTA_GESTAO">TecCosta (Gestão)</option>
-                    <option value="ADMINISTRADOR">Administrador</option>
-                    <option value="ADMINISTRADORA_CONDOMINIO">Administradora do Condomínio</option>
-                  </select>
-                </div>
-
-                {role === 'CONDOMINIO_EMPRESA' && (
-                  <div className={styles.formGroup}>
-                    <label htmlFor="subRole">
-                      Função no Condomínio <span className={styles.required}>*</span>
-                    </label>
-                    <select
-                      id="subRole"
-                      value={subRole}
-                      onChange={(e) => setSubRole(e.target.value)}
-                      required
-                      disabled={loading}
-                    >
-                      <option value="Síndico">Síndico</option>
-                      <option value="Zelador">Zelador</option>
-                      <option value="Conselheiro">Conselheiro</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.btnCancel}
-                  onClick={handleCloseModal}
-                  disabled={loading}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className={styles.btnSubmit}
-                  disabled={loading}
-                >
-                  {loading ? 'Salvando...' : (editingUserId ? 'Salvar Alterações' : 'Cadastrar Usuário')}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
