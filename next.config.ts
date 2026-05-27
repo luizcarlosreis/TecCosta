@@ -9,11 +9,20 @@ try {
   const shallowPath = path.join(gitDir, "shallow");
   if (fs.existsSync(shallowPath)) {
     console.log("Detectado clone raso (shallow clone) na Vercel. Desfazendo limitação de histórico...");
-    execSync("git fetch --unshallow", { stdio: "inherit" });
+    const branch = process.env.VERCEL_GIT_COMMIT_REF || "main";
+    // Usar o URL público do GitHub para evitar restrições de permissão ou caminhos locais da Vercel
+    execSync(`git fetch --unshallow https://github.com/luizcarlosreis/TecCosta.git ${branch}`, { stdio: "inherit" });
     console.log("Histórico do git restaurado com sucesso!");
   }
 } catch (error) {
-  console.log("Não foi possível restaurar o histórico completo do git:", error);
+  console.log("Não foi possível restaurar o histórico completo do git, tentando com profundidade maior...", error);
+  try {
+    const branch = process.env.VERCEL_GIT_COMMIT_REF || "main";
+    execSync(`git fetch --depth=100 https://github.com/luizcarlosreis/TecCosta.git ${branch}`, { stdio: "inherit" });
+    console.log("Histórico parcial (depth 100) carregado com sucesso!");
+  } catch (err) {
+    console.log("Falha crítica ao obter histórico do git remoto:", err);
+  }
 }
 
 // 2. Read the base version from version.ts
