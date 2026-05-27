@@ -93,6 +93,8 @@ export default function DashboardLayout({
           flex-direction: column;
           padding: 20px 0;
           transition: all 0.3s;
+          position: relative;
+          z-index: 100;
         }
 
         .sidebar-header {
@@ -179,6 +181,8 @@ export default function DashboardLayout({
           justify-content: flex-end;
           border-bottom: 1px solid #e2e8f0;
           background: white;
+          position: relative;
+          z-index: 90;
         }
 
         .header-user {
