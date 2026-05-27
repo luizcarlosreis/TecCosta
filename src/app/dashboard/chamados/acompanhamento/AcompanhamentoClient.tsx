@@ -7,6 +7,16 @@ import { updateRequestStatusAction, getAllRequestsAction } from '@/app/actions/r
 interface SerializedClient { id: string; name: string; }
 interface SerializedTechnician { id: string; name: string; }
 
+interface SerializedSchedulingHistory {
+  id: string;
+  requestId: number;
+  scheduledDate: string;
+  technicianId: string;
+  technicianName: string;
+  changedBy: string;
+  createdAt: string;
+}
+
 interface SerializedRequest {
   id: number;
   description: string;
@@ -24,6 +34,7 @@ interface SerializedRequest {
   createdAt: string;
   client: SerializedClient;
   technician: SerializedTechnician | null;
+  schedulings?: SerializedSchedulingHistory[];
 }
 
 interface AcompanhamentoClientProps {
@@ -163,6 +174,20 @@ export default function AcompanhamentoClient({
     setError(null);
     setSuccess(null);
 
+    // Validação de técnico e data obrigatórios para qualquer status diferente de CANCELADO
+    if (formStatus !== 'CANCELADO') {
+      if (!formDataAtendimento) {
+        setError('Por favor, informe a data e hora do agendamento.');
+        setLoading(false);
+        return;
+      }
+      if (!formTechnicianId) {
+        setError('Por favor, selecione um técnico responsável. O técnico é obrigatório.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append('status', formStatus);
@@ -274,6 +299,37 @@ export default function AcompanhamentoClient({
           </div>
         </div>
 
+        {/* Histórico de Agendamentos */}
+        {editingRequest.schedulings && editingRequest.schedulings.length > 0 && (
+          <div className={styles.requestInfoPanel} style={{ marginTop: '-12px', marginBottom: '24px', borderTop: 'none' }}>
+            <div className={styles.requestInfoHeader} style={{ backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
+              <span className={styles.requestInfoTitle} style={{ color: '#d97706' }}>⏳ Histórico de Agendamentos ({editingRequest.schedulings.length})</span>
+            </div>
+            <div style={{ padding: '16px 24px', maxHeight: '200px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #cbd5e1', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                    <th style={{ padding: '6px 0' }}>Data Agendada</th>
+                    <th style={{ padding: '6px 0' }}>Técnico Atribuído</th>
+                    <th style={{ padding: '6px 0' }}>Alterado por</th>
+                    <th style={{ padding: '6px 0' }}>Data de Registro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editingRequest.schedulings.map((hist) => (
+                    <tr key={hist.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 0', fontWeight: 600, color: 'var(--primary-color)' }}>{formatDateTime(hist.scheduledDate)}</td>
+                      <td style={{ padding: '8px 0', fontWeight: 500 }}>{hist.technicianName}</td>
+                      <td style={{ padding: '8px 0', color: '#475569' }}>{hist.changedBy}</td>
+                      <td style={{ padding: '8px 0', color: '#64748b' }}>{formatDateTime(hist.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Formulário de atualização */}
         <div className={styles.formCard}>
           <form onSubmit={handleSubmit}>
@@ -306,25 +362,27 @@ export default function AcompanhamentoClient({
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="dataAtendimento">Data e Hora de Agendamento</label>
+                <label htmlFor="dataAtendimento">Data e Hora de Agendamento {formStatus !== 'CANCELADO' && <span className={styles.required}>*</span>}</label>
                 <input
                   type="datetime-local"
                   id="dataAtendimento"
                   value={formDataAtendimento}
                   onChange={(e) => setFormDataAtendimento(e.target.value)}
                   disabled={loading}
+                  required={formStatus !== 'CANCELADO'}
                 />
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="technicianId">Técnico Responsável</label>
+                <label htmlFor="technicianId">Técnico Responsável {formStatus !== 'CANCELADO' && <span className={styles.required}>*</span>}</label>
                 <select
                   id="technicianId"
                   value={formTechnicianId}
                   onChange={(e) => setFormTechnicianId(e.target.value)}
                   disabled={loading}
+                  required={formStatus !== 'CANCELADO'}
                 >
-                  <option value="">— Sem técnico atribuído —</option>
+                  <option value="" disabled>-- Selecione o Técnico --</option>
                   {technicians.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
@@ -484,7 +542,7 @@ export default function AcompanhamentoClient({
                     {isAdmin && (
                       <td>
                         <button className={styles.btnEdit} onClick={() => handleEditClick(req)}>
-                          ✏️ Atualizar
+                          {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
                         </button>
                       </td>
                     )}

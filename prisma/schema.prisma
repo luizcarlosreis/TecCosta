@@ -100,6 +100,18 @@ model MaintenanceRequest {
   client            Client        @relation(fields: [clientId], references: [id])
   technicianId      String?
   technician        User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
+  schedulings       SchedulingHistory[] @relation("RequestSchedulings")
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+}
+
+model SchedulingHistory {
+  id              String             @id @default(cuid())
+  requestId       Int
+  request         MaintenanceRequest @relation("RequestSchedulings", fields: [requestId], references: [id], onDelete: Cascade)
+  scheduledDate   DateTime
+  technicianId    String
+  technicianName  String
+  changedBy       String
+  createdAt       DateTime           @default(now())
 }

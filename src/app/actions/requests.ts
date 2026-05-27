@@ -178,13 +178,13 @@ export async function getRequestsAction() {
 
       requests = await prisma.maintenanceRequest.findMany({
         where: { clientId: { in: clientIds } },
-        include: { client: true, technician: true },
+        include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
         orderBy: { createdAt: 'desc' }
       });
     } else {
       // Admins e TecCosta Gestão visualizam todos os chamados
       requests = await prisma.maintenanceRequest.findMany({
-        include: { client: true, technician: true },
+        include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
         orderBy: { createdAt: 'desc' }
       });
     }
@@ -336,12 +336,12 @@ export async function getAllRequestsAction() {
 
       requests = await prisma.maintenanceRequest.findMany({
         where: { clientId: { in: clientIds } },
-        include: { client: true, technician: true },
+        include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
         orderBy: { createdAt: 'desc' }
       });
     } else {
       requests = await prisma.maintenanceRequest.findMany({
-        include: { client: true, technician: true },
+        include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
         orderBy: { createdAt: 'desc' }
       });
     }
@@ -372,6 +372,16 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
     return { error: 'Status é obrigatório.' };
   }
 
+  // Técnico e Data/Hora de agendamento são obrigatórios para agendar/reagendar (qualquer status exceto cancelamento)
+  if (status !== 'CANCELADO') {
+    if (!technicianId) {
+      return { error: 'Por favor, selecione um técnico responsável. O técnico é obrigatório.' };
+    }
+    if (!dataAtendimentoStr) {
+      return { error: 'Por favor, informe a data e hora do agendamento.' };
+    }
+  }
+
   try {
     const existing = await prisma.maintenanceRequest.findUnique({ where: { id } });
     if (!existing) {
@@ -380,14 +390,22 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
 
     const updateData: Record<string, unknown> = { status };
 
+    let parsedDate: Date | null = null;
     if (dataAtendimentoStr) {
-      const parsedDate = new Date(dataAtendimentoStr);
-      if (!isNaN(parsedDate.getTime())) {
-        updateData.dataAtendimento = parsedDate;
+      parsedDate = new Date(dataAtendimentoStr);
+      if (isNaN(parsedDate.getTime())) {
+        return { error: 'Data e hora de agendamento inválidas.' };
       }
+      updateData.dataAtendimento = parsedDate;
     }
 
+    let techName = '';
     if (technicianId) {
+      const tech = await prisma.user.findUnique({ where: { id: technicianId } });
+      if (!tech) {
+        return { error: 'Técnico responsável não encontrado.' };
+      }
+      techName = tech.name;
       updateData.technicianId = technicianId;
     } else {
       updateData.technicianId = null;
@@ -397,6 +415,19 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
       where: { id },
       data: updateData
     });
+
+    // Se agendado/reagendado com sucesso (possui data e técnico), grava um registro de histórico
+    if (status !== 'CANCELADO' && parsedDate && technicianId) {
+      await prisma.schedulingHistory.create({
+        data: {
+          requestId: id,
+          scheduledDate: parsedDate,
+          technicianId,
+          technicianName: techName,
+          changedBy: sessionUser.name
+        }
+      });
+    }
 
     revalidatePath('/dashboard/chamados/acompanhamento');
     revalidatePath('/dashboard/chamados/solicitacao');
