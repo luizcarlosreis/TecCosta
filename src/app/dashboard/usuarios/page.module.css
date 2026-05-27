@@ -210,6 +210,21 @@
   gap: 8px;
 }
 
+.btnEdit {
+  color: var(--primary-color);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid rgba(0, 51, 102, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btnEdit:hover {
+  background-color: rgba(0, 51, 102, 0.06);
+  border-color: var(--primary-color);
+}
+
 .btnDelete {
   color: var(--error-color);
   padding: 6px 12px;

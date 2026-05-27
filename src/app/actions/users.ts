@@ -77,3 +77,57 @@ export async function deleteUserAction(id: string) {
     return { error: 'Erro ao tentar excluir o usuário.' };
   }
 }
+
+export async function updateUserAction(id: string, formData: FormData) {
+  const name = formData.get('name') as string;
+  const cpfCnpj = formData.get('cpfCnpj') as string;
+  const birthDate = formData.get('birthDate') as string;
+  const phone = formData.get('phone') as string;
+  const password = formData.get('password') as string;
+  const role = formData.get('role') as string;
+  const subRole = formData.get('subRole') as string;
+
+  if (!id || !name || !cpfCnpj || !role) {
+    return { error: 'Por favor, preencha todos os campos obrigatórios (Nome, CPF e Perfil).' };
+  }
+
+  try {
+    // Verificar se o CPF já pertence a outro usuário
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        cpfCnpj,
+        NOT: { id },
+      },
+    });
+
+    if (existingUser) {
+      return { error: 'Um outro usuário com este CPF/CNPJ já está cadastrado.' };
+    }
+
+    // Preparar os dados a atualizar
+    const updateData: any = {
+      name,
+      cpfCnpj,
+      role: role as Role,
+      birthDate: birthDate || null,
+      phone: phone || null,
+      subRole: role === 'CONDOMINIO_EMPRESA' ? (subRole || null) : null,
+    };
+
+    // Atualizar senha se fornecida
+    if (password && password.trim() !== '') {
+      updateData.password = password;
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
+
+    revalidatePath('/dashboard/usuarios');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return { error: 'Ocorreu um erro ao tentar atualizar o usuário no banco de dados.' };
+  }
+}

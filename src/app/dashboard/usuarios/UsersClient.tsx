@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import styles from './page.module.css';
-import { createUserAction, deleteUserAction, getUsersAction } from '@/app/actions/users';
+import { createUserAction, deleteUserAction, getUsersAction, updateUserAction } from '@/app/actions/users';
 
 interface SerializedUser {
   id: string;
@@ -68,6 +68,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
   const [users, setUsers] = useState<SerializedUser[]>(initialUsers);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -106,6 +107,32 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
     setPhone(formatPhone(e.target.value));
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingUserId(null);
+    setName('');
+    setCpfCnpj('');
+    setBirthDate('');
+    setPhone('');
+    setPassword('');
+    setRole('CONDOMINIO_EMPRESA');
+    setSubRole('Síndico');
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleEditClick = (user: SerializedUser) => {
+    setEditingUserId(user.id);
+    setName(user.name);
+    setCpfCnpj(user.cpfCnpj);
+    setBirthDate(user.birthDate || '');
+    setPhone(user.phone || '');
+    setPassword(''); // Em branco ao editar para indicar que é opcional
+    setRole(user.role);
+    setSubRole(user.subRole || 'Síndico');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -115,6 +142,12 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
     // Validações simples
     if (cpfCnpj.length < 14) {
       setError('CPF inválido. Preencha completamente.');
+      setLoading(false);
+      return;
+    }
+
+    if (!editingUserId && !password) {
+      setError('A senha de acesso é obrigatória para novos usuários.');
       setLoading(false);
       return;
     }
@@ -129,13 +162,15 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
       formData.append('role', role);
       formData.append('subRole', role === 'CONDOMINIO_EMPRESA' ? subRole : '');
 
-      const result = await createUserAction(formData);
+      const result = editingUserId
+        ? await updateUserAction(editingUserId, formData)
+        : await createUserAction(formData);
 
       if (result?.error) {
         setError(result.error);
         setLoading(false);
       } else {
-        setSuccess('Usuário cadastrado com sucesso!');
+        setSuccess(editingUserId ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!');
         
         // Obter lista atualizada do banco de dados
         const updated = await getUsersAction();
@@ -143,20 +178,9 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
           setUsers(updated.users as unknown as SerializedUser[]);
         }
 
-        // Limpar form
-        setName('');
-        setCpfCnpj('');
-        setBirthDate('');
-        setPhone('');
-        setPassword('');
-        setRole('CONDOMINIO_EMPRESA');
-        setSubRole('Síndico');
-
         setTimeout(() => {
-          setIsModalOpen(false);
-          setSuccess(null);
+          handleCloseModal();
         }, 1500);
-        setLoading(false);
       }
     } catch (err) {
       console.error('Error submitting form:', err);
@@ -276,6 +300,12 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
                   <td>
                     <div className={styles.actionsCell}>
                       <button
+                        className={styles.btnEdit}
+                        onClick={() => handleEditClick(user)}
+                      >
+                        Editar
+                      </button>
+                      <button
                         className={styles.btnDelete}
                         onClick={() => handleDelete(user.id, user.name)}
                       >
@@ -293,8 +323,12 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent + ' glass'}>
-            <h2>Cadastrar Novo Usuário</h2>
-            <p className={styles.modalSubtitle}>Preencha os campos abaixo para registrar um usuário no sistema.</p>
+            <h2>{editingUserId ? 'Editar Usuário' : 'Cadastrar Novo Usuário'}</h2>
+            <p className={styles.modalSubtitle}>
+              {editingUserId
+                ? 'Edite os campos abaixo para atualizar as informações do usuário no sistema.'
+                : 'Preencha os campos abaixo para registrar um usuário no sistema.'}
+            </p>
 
             {error && (
               <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>
@@ -342,15 +376,15 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
 
                 <div className={styles.formGroup}>
                   <label htmlFor="password">
-                    Senha de Acesso <span className={styles.required}>*</span>
+                    Senha de Acesso {!editingUserId && <span className={styles.required}>*</span>}
                   </label>
                   <input
                     type="password"
                     id="password"
-                    placeholder="••••••••"
+                    placeholder={editingUserId ? "Deixe em branco para manter a atual" : "••••••••"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
+                    required={!editingUserId}
                     disabled={loading}
                   />
                 </div>
@@ -422,7 +456,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
                 <button
                   type="button"
                   className={styles.btnCancel}
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   disabled={loading}
                 >
                   Cancelar
@@ -432,7 +466,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
                   className={styles.btnSubmit}
                   disabled={loading}
                 >
-                  {loading ? 'Salvando...' : 'Cadastrar Usuário'}
+                  {loading ? 'Salvando...' : (editingUserId ? 'Salvar Alterações' : 'Cadastrar Usuário')}
                 </button>
               </div>
             </form>
