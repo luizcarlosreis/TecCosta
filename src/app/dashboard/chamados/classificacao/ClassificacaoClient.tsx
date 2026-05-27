@@ -76,7 +76,7 @@ const NIVEIS = {
     horas: null,
     color: '#7c3aed',
     bg: '#ede9fe',
-    tipos: ['Operacionais', 'Emergenciais']
+    tipos: ['Operacionais'] // Nível 4 apenas para Operacionais
   }
 };
 
@@ -133,7 +133,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
   // Lista local (remove chamado classificado sem reload)
   const [requests, setRequests] = useState<SerializedRequest[]>(pendingRequests);
 
-  const isAdmin = sessionUser.role !== 'CONDOMINIO_EMPRESA';
+  const isAdmin = sessionUser.role === 'ADMINISTRADOR' || sessionUser.role === 'TECCOSTA_GESTAO';
 
   const filteredRequests = requests.filter((r) => {
     const q = searchQuery.toLowerCase();

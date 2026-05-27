@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { logoutAction } from '@/app/actions/auth';
 import Link from 'next/link';
@@ -12,23 +12,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
 
-  // Dados do usuário logado lidos do cookie de sessão
+  // Dados do usuário logado lidos via API (cookie httpOnly não é acessível no browser)
   const [sessionUser, setSessionUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    try {
-      const cookies = document.cookie.split(';');
-      const sessionCookie = cookies.find((c) => c.trim().startsWith('teccosta-session='));
-      if (sessionCookie) {
-        const value = decodeURIComponent(sessionCookie.split('=').slice(1).join('='));
-        const parsed = JSON.parse(value) as { id: string; name: string; role: string };
-        setSessionUser(parsed);
-      }
-    } catch (e) {
-      // Silencia erros de parsing
-    }
+    fetch('/api/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setSessionUser(data.user);
+      })
+      .catch(() => {});
   }, []);
 
   // Gera as iniciais a partir do nome completo
@@ -61,6 +55,7 @@ export default function DashboardLayout({
     { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
     { name: 'Solicitação de Chamado', href: '/dashboard/chamados/solicitacao', icon: '📝' },
     { name: 'Classificação do Chamado', href: '/dashboard/chamados/classificacao', icon: '🗂️' },
+    { name: 'Acompanhamento de Chamado', href: '/dashboard/chamados/acompanhamento', icon: '📊' },
   ];
 
   return (

@@ -253,8 +253,8 @@ export async function classifyRequestAction(id: number, formData: FormData) {
   }
 
   // Apenas Administradores e TecCosta Gestão podem classificar chamados
-  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
-    return { error: 'Você não tem permissão para classificar chamados. Apenas a equipe TecCosta pode realizar esta ação.' };
+  if (sessionUser.role !== 'ADMINISTRADOR' && sessionUser.role !== 'TECCOSTA_GESTAO') {
+    return { error: 'Você não tem permissão para classificar chamados. Apenas Administradores e a equipe TecCosta Gestão podem realizar esta ação.' };
   }
 
   const nivelCriticidade = formData.get('nivelCriticidade') as string;
@@ -317,5 +317,95 @@ export async function classifyRequestAction(id: number, formData: FormData) {
   } catch (error) {
     console.error('Error classifying request:', error);
     return { error: 'Ocorreu um erro ao classificar o chamado.' };
+  }
+}
+
+// Buscar TODOS os chamados (para a tela de Acompanhamento)
+export async function getAllRequestsAction() {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado.' };
+  }
+
+  try {
+    let requests;
+
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+      const clientIds = managedClients.map(c => c.id);
+
+      requests = await prisma.maintenanceRequest.findMany({
+        where: { clientId: { in: clientIds } },
+        include: { client: true, technician: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else {
+      requests = await prisma.maintenanceRequest.findMany({
+        include: { client: true, technician: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    return { requests: JSON.parse(JSON.stringify(requests)) };
+  } catch (error) {
+    console.error('Error fetching all requests:', error);
+    return { error: 'Ocorreu um erro ao obter os chamados.' };
+  }
+}
+
+// Atualizar status, data de atendimento e técnico de um chamado (Acompanhamento)
+export async function updateRequestStatusAction(id: number, formData: FormData) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado.' };
+  }
+
+  if (sessionUser.role !== 'ADMINISTRADOR' && sessionUser.role !== 'TECCOSTA_GESTAO') {
+    return { error: 'Você não tem permissão para atualizar o status do chamado.' };
+  }
+
+  const status = formData.get('status') as string;
+  const dataAtendimentoStr = formData.get('dataAtendimento') as string;
+  const technicianId = formData.get('technicianId') as string;
+
+  if (!status) {
+    return { error: 'Status é obrigatório.' };
+  }
+
+  try {
+    const existing = await prisma.maintenanceRequest.findUnique({ where: { id } });
+    if (!existing) {
+      return { error: 'Chamado não encontrado.' };
+    }
+
+    const updateData: Record<string, unknown> = { status };
+
+    if (dataAtendimentoStr) {
+      const parsedDate = new Date(dataAtendimentoStr);
+      if (!isNaN(parsedDate.getTime())) {
+        updateData.dataAtendimento = parsedDate;
+      }
+    }
+
+    if (technicianId) {
+      updateData.technicianId = technicianId;
+    } else {
+      updateData.technicianId = null;
+    }
+
+    await prisma.maintenanceRequest.update({
+      where: { id },
+      data: updateData
+    });
+
+    revalidatePath('/dashboard/chamados/acompanhamento');
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating request status:', error);
+    return { error: 'Erro ao atualizar o chamado.' };
   }
 }
