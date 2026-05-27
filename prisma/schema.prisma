@@ -77,15 +77,17 @@ model Contact {
 }
 
 model MaintenanceRequest {
-  id          Int           @id @default(autoincrement()) // For sequential numbering starting at 50 (configured in DB or logic)
-  requestNum  Int           @unique @default(50) // We can handle the starting point in logic or initial seed
-  title       String
-  description String
-  status      RequestStatus @default(PENDENTE)
-  clientId    String
-  client      Client        @relation(fields: [clientId], references: [id])
+  id           Int           @id @default(autoincrement())
+  description  String        // Descritivo da solicitação
+  tipoChamado  String        // Operacionais | Emergenciais
+  categoria    String        // Categoria (ex: Elétrica, Câmeras)
+  subItem      String?       // Sub item opcional
+  observacao   String?       // Observação livre
+  status       RequestStatus @default(PENDENTE)
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id])
   technicianId String?
-  technician  User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  technician   User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }

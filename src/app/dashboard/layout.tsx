@@ -21,6 +21,8 @@ export default function DashboardLayout({
     { name: 'Início', href: '/dashboard', icon: '🏠' },
     { name: 'Clientes', href: '/dashboard/clientes', icon: '👥' },
     { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
+    { name: 'Solicitação de Chamado', href: '/dashboard/chamados/solicitacao', icon: '📝' },
+    { name: 'Classificação do Chamado', href: '/dashboard/chamados/classificacao', icon: '🗂️' },
   ];
 
   return (

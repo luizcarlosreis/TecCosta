@@ -1,0 +1,140 @@
+'use server';
+
+import { prisma } from '@/app/lib/prisma';
+import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
+
+// Helper para buscar a sessão do usuário logado
+async function getSessionUser() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('teccosta-session');
+  if (!sessionCookie || !sessionCookie.value) {
+    return null;
+  }
+  try {
+    return JSON.parse(sessionCookie.value) as { id: string; name: string; role: string };
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function createRequestAction(formData: FormData) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado. Por favor, realize o login novamente.' };
+  }
+
+  const description = formData.get('description') as string;
+  const tipoChamado = formData.get('tipoChamado') as string;
+  const categoria = formData.get('categoria') as string;
+  const subItem = formData.get('subItem') as string;
+  const observacao = formData.get('observacao') as string;
+  
+  let clientId = formData.get('clientId') as string;
+
+  if (!description || !tipoChamado || !categoria) {
+    return { error: 'Por favor, preencha todos os campos obrigatórios.' };
+  }
+
+  try {
+    // 1. Resolver o cliente (Empresa/Condomínio)
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+      // Usuário gestor: busca as empresas/condomínios a ele associados
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+
+      if (managedClients.length === 0) {
+        return { error: 'Seu usuário de gestor não está associado a nenhum Condomínio ou Empresa cliente.' };
+      }
+      
+      // Associa ao primeiro cliente gerenciado
+      clientId = managedClients[0].id;
+    } else {
+      // Administradores ou equipe de gestão: selecionam o cliente no dropdown
+      if (!clientId) {
+        return { error: 'Por favor, selecione um Cliente (Condomínio/Empresa).' };
+      }
+    }
+
+    // 2. Criar a solicitação de chamado no banco de dados
+    const request = await prisma.maintenanceRequest.create({
+      data: {
+        description,
+        tipoChamado,
+        categoria,
+        subItem: subItem || null,
+        observacao: observacao || null,
+        clientId,
+        status: 'PENDENTE'
+      }
+    });
+
+    console.log('Chamado criado com sucesso:', request.id);
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true, id: request.id };
+
+  } catch (error) {
+    console.error('Error creating maintenance request:', error);
+    return { error: 'Ocorreu um erro ao registrar a solicitação de chamado.' };
+  }
+}
+
+export async function getRequestsAction() {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado.' };
+  }
+
+  try {
+    let requests;
+
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+      // Filtrar chamados exclusivamente do(s) cliente(s) que este gestor gerencia
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+      const clientIds = managedClients.map(c => c.id);
+
+      requests = await prisma.maintenanceRequest.findMany({
+        where: { clientId: { in: clientIds } },
+        include: { client: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else {
+      // Admins e TecCosta Gestão visualizam todos os chamados
+      requests = await prisma.maintenanceRequest.findMany({
+        include: { client: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    // Serializar datas para evitar problemas com Server Components
+    const serializedRequests = JSON.parse(JSON.stringify(requests));
+
+    return { requests: serializedRequests };
+  } catch (error) {
+    console.error('Error fetching requests:', error);
+    return { error: 'Ocorreu um erro ao obter a lista de solicitações.' };
+  }
+}
+
+export async function deleteRequestAction(id: number) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser || sessionUser.role === 'CONDOMINIO_EMPRESA') {
+    return { error: 'Não autorizado para excluir chamados.' };
+  }
+
+  try {
+    await prisma.maintenanceRequest.delete({
+      where: { id }
+    });
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting request:', error);
+    return { error: 'Erro ao tentar excluir a solicitação.' };
+  }
+}
