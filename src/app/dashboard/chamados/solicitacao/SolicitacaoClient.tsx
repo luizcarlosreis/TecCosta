@@ -715,8 +715,9 @@ export default function SolicitacaoClient({
                         )}
                       </div>
                     </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
