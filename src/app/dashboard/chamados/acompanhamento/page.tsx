@@ -19,7 +19,7 @@ export default async function AcompanhamentoPage() {
     redirect('/');
   }
 
-  // Buscar todos os chamados (filtrado por cliente se for gestor)
+  // Buscar todos os chamados classificados (filtrado por cliente se for gestor)
   let requests;
   if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
     const managedClients = await prisma.client.findMany({
@@ -28,12 +28,18 @@ export default async function AcompanhamentoPage() {
     });
     const clientIds = managedClients.map((c) => c.id);
     requests = await prisma.maintenanceRequest.findMany({
-      where: { clientId: { in: clientIds } },
+      where: {
+        clientId: { in: clientIds },
+        nivelCriticidade: { not: null }
+      },
       include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });
   } else {
     requests = await prisma.maintenanceRequest.findMany({
+      where: {
+        nivelCriticidade: { not: null }
+      },
       include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });

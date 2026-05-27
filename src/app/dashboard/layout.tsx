@@ -55,7 +55,7 @@ export default function DashboardLayout({
     { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
     { name: 'Solicitação de Chamado', href: '/dashboard/chamados/solicitacao', icon: '📝' },
     { name: 'Classificação do Chamado', href: '/dashboard/chamados/classificacao', icon: '🗂️' },
-    { name: 'Acompanhamento de Chamado', href: '/dashboard/chamados/acompanhamento', icon: '📊' },
+    { name: 'Agendamento do chamado', href: '/dashboard/chamados/acompanhamento', icon: '📊' },
   ];
 
   return (

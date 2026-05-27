@@ -56,11 +56,36 @@ function formatDateTime(dateStr: string | null): string {
   return `${d}/${m}/${y} ${h}:${min}`;
 }
 
-function toInputDateValue(dateStr: string | null): string {
+function getPrazoFinal(req: SerializedRequest): string | null {
+  if (!req.classifiedAt || !req.nivelCriticidade) return null;
+  const classifiedDate = new Date(req.classifiedAt);
+  if (req.nivelCriticidade === '1') {
+    return new Date(classifiedDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '2') {
+    return new Date(classifiedDate.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '3') {
+    return new Date(classifiedDate.getTime() + 72 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '4') {
+    return req.dataAtendimento;
+  }
+  return null;
+}
+
+function toInputDateTimeValue(dateStr: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  return d.toISOString().split('T')[0];
+  
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function isClosed(status: string) {
@@ -115,7 +140,7 @@ export default function AcompanhamentoClient({
   const handleEditClick = (req: SerializedRequest) => {
     setEditingRequest(req);
     setFormStatus(req.status);
-    setFormDataAtendimento(toInputDateValue(req.dataAtendimento));
+    setFormDataAtendimento(toInputDateTimeValue(req.dataAtendimento));
     setFormTechnicianId(req.technician?.id || '');
     setError(null);
     setSuccess(null);
@@ -194,8 +219,8 @@ export default function AcompanhamentoClient({
 
         <div className={styles.pageHeader}>
           <div>
-            <h1>Acompanhar Chamado #{String(editingRequest.id).padStart(3, '0')}</h1>
-            <p>Atualize o status, data de atendimento e técnico responsável.</p>
+            <h1>Agendar Chamado #{String(editingRequest.id).padStart(3, '0')}</h1>
+            <p>Atualize o status, data/hora de agendamento e técnico responsável.</p>
           </div>
         </div>
 
@@ -269,9 +294,20 @@ export default function AcompanhamentoClient({
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="dataAtendimento">Data de Atendimento</label>
+                <label>Prazo Final (SLA)</label>
                 <input
-                  type="date"
+                  type="text"
+                  value={formatDateTime(getPrazoFinal(editingRequest))}
+                  className={styles.readonlyField}
+                  readOnly
+                  disabled
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="dataAtendimento">Data e Hora de Agendamento</label>
+                <input
+                  type="datetime-local"
                   id="dataAtendimento"
                   value={formDataAtendimento}
                   onChange={(e) => setFormDataAtendimento(e.target.value)}
@@ -314,8 +350,8 @@ export default function AcompanhamentoClient({
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <div>
-          <h1>Acompanhamento de Chamado</h1>
-          <p>Visualize todos os chamados, atualize status, data de atendimento e técnico responsável.</p>
+          <h1>Agendamento do chamado</h1>
+          <p>Agende e gerencie os atendimentos dos chamados classificados.</p>
         </div>
         <div className={styles.countersRow}>
           <div className={styles.counterCard} style={{ borderColor: '#f59e0b', background: '#fef3c7' }}>
@@ -371,7 +407,8 @@ export default function AcompanhamentoClient({
                 <th>Tipo / Nível</th>
                 <th>Categoria</th>
                 <th>Data Abertura</th>
-                <th>Data Atendimento</th>
+                <th>Prazo Final (SLA)</th>
+                <th>Data Agendada</th>
                 <th>Técnico</th>
                 <th>Status</th>
                 {isAdmin && <th>Ações</th>}
@@ -380,6 +417,7 @@ export default function AcompanhamentoClient({
             <tbody>
               {filteredRequests.map((req) => {
                 const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
+                const prazoFinal = getPrazoFinal(req);
                 return (
                   <tr key={req.id} className={styles.rowHover}>
                     <td>
@@ -419,6 +457,11 @@ export default function AcompanhamentoClient({
                     </td>
                     <td>
                       <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
+                    </td>
+                    <td>
+                      <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
+                        {formatDateTime(prazoFinal)}
+                      </span>
                     </td>
                     <td>
                       <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
