@@ -31,13 +31,13 @@ export default async function SolicitacaoPage() {
 
     requests = await prisma.maintenanceRequest.findMany({
       where: { clientId: { in: clientIds } },
-      include: { client: true },
+      include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });
   } else {
     // Admins e Gestão veem tudo
     requests = await prisma.maintenanceRequest.findMany({
-      include: { client: true },
+      include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });
   }

@@ -178,13 +178,13 @@ export async function getRequestsAction() {
 
       requests = await prisma.maintenanceRequest.findMany({
         where: { clientId: { in: clientIds } },
-        include: { client: true },
+        include: { client: true, technician: true },
         orderBy: { createdAt: 'desc' }
       });
     } else {
       // Admins e TecCosta Gestão visualizam todos os chamados
       requests = await prisma.maintenanceRequest.findMany({
-        include: { client: true },
+        include: { client: true, technician: true },
         orderBy: { createdAt: 'desc' }
       });
     }

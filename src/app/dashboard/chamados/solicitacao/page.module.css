@@ -425,3 +425,47 @@
   border-color: var(--primary-color);
 }
 
+.nivelBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.nivelBadgeEmpty {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.subItemLabel {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.technicianName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #1e40af;
+  background: #eff6ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.unassigned {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+

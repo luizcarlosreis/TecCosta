@@ -19,9 +19,14 @@ interface SerializedRequest {
   observacao: string | null;
   openedBy: string | null;
   createdById: string | null;
+  nivelCriticidade: string | null;
+  classifiedBy: string | null;
+  classifiedAt: string | null;
+  dataAtendimento: string | null;
   status: string;
   createdAt: string;
   client: SerializedClient;
+  technician: { id: string; name: string } | null;
 }
 
 interface SolicitacaoClientProps {
@@ -97,6 +102,31 @@ const EMERGENCIAIS_MAP: Record<string, string[]> = {
     'Curtos que gerem risco'
   ]
 };
+
+const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  '1': { label: 'N1 – Emergencial', color: '#dc2626', bg: '#fee2e2' },
+  '2': { label: 'N2 – Urgente',     color: '#d97706', bg: '#fef3c7' },
+  '3': { label: 'N3 – Programado',  color: '#0369a1', bg: '#e0f2fe' },
+  '4': { label: 'N4 – Agendado',    color: '#7c3aed', bg: '#ede9fe' },
+};
+
+function getPrazoFinal(req: SerializedRequest): string | null {
+  if (!req.classifiedAt || !req.nivelCriticidade) return null;
+  const classifiedDate = new Date(req.classifiedAt);
+  if (req.nivelCriticidade === '1') {
+    return new Date(classifiedDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '2') {
+    return new Date(classifiedDate.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '3') {
+    return new Date(classifiedDate.getTime() + 72 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.nivelCriticidade === '4') {
+    return req.dataAtendimento;
+  }
+  return null;
+}
 
 export default function SolicitacaoClient({
   initialRequests,
@@ -580,76 +610,111 @@ export default function SolicitacaoClient({
                 <th>Chamado</th>
                 <th>Solicitante</th>
                 <th>Cliente</th>
-                <th>Tipo</th>
-                <th>Classificação / Categoria</th>
-                <th>Data e Hora</th>
+                <th>Tipo / Nível</th>
+                <th>Categoria</th>
+                <th>Data Abertura</th>
+                <th>Prazo Final (SLA)</th>
+                <th>Data Agendada</th>
+                <th>Técnico</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRequests.map((req) => (
-                <tr key={req.id} className={styles.rowHover}>
-                  <td>
-                    <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
-                      #{String(req.id).padStart(3, '0')}
-                    </div>
-                    <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '4px', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={req.description}>
-                      {req.description}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#334155' }}>
-                      {req.openedBy || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não registrado</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.clientText}>{req.client.name}</span>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
-                      {req.tipoChamado}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={styles.categoryLabel}>{req.categoria}</span>
-                    {req.subItem && (
-                      <span className={styles.subItemLabel}>{req.subItem}</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={styles.dateText}>
-                      {formatDateTime(req.createdAt)}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
-                      {getStatusLabel(req.status)}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.actionsCell}>
-                      {/* Editar: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
-                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
-                        <button
-                          className={styles.btnEdit}
-                          onClick={() => handleEditClick(req)}
-                        >
-                          Editar
-                        </button>
+              {filteredRequests.map((req) => {
+                const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
+                const prazoFinal = getPrazoFinal(req);
+                return (
+                  <tr key={req.id} className={styles.rowHover}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
+                        #{String(req.id).padStart(3, '0')}
+                      </div>
+                      <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '4px', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={req.description}>
+                        {req.description}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#334155' }}>
+                        {req.openedBy || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não registrado</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={styles.clientText}>{req.client.name}</span>
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
+                        {req.tipoChamado}
+                      </span>
+                      {nivel && (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
+                            {nivel.label}
+                          </span>
+                        </div>
                       )}
+                      {!nivel && (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={styles.nivelBadgeEmpty}>Sem nível</span>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.categoryLabel}>{req.categoria}</span>
+                      {req.subItem && (
+                        <span className={styles.subItemLabel}>{req.subItem}</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.dateText}>
+                        {formatDateTime(req.createdAt)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
+                        {formatDateTime(prazoFinal)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
+                        {formatDateTime(req.dataAtendimento)}
+                      </span>
+                    </td>
+                    <td>
+                      {req.technician ? (
+                        <span className={styles.technicianName}>{req.technician.name}</span>
+                      ) : (
+                        <span className={styles.unassigned}>Não atribuído</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
+                        {getStatusLabel(req.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.actionsCell}>
+                        {/* Editar: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
+                        {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
+                          <button
+                            className={styles.btnEdit}
+                            onClick={() => handleEditClick(req)}
+                          >
+                            Editar
+                          </button>
+                        )}
 
-                      {/* Excluir: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
-                      {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
-                        <button
-                          className={styles.btnDelete}
-                          onClick={() => handleDelete(req.id)}
-                        >
-                          Excluir
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                        {/* Excluir: Visível se status for PENDENTE AND (Admin OR o próprio solicitante OR retrocompatibilidade null) */}
+                        {req.status === 'PENDENTE' && (sessionUser.role !== 'CONDOMINIO_EMPRESA' || req.createdById === sessionUser.id || req.createdById === null) && (
+                          <button
+                            className={styles.btnDelete}
+                            onClick={() => handleDelete(req.id)}
+                          >
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    </td>
                 </tr>
               ))}
             </tbody>
