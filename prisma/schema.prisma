@@ -77,19 +77,25 @@ model Contact {
 }
 
 model MaintenanceRequest {
-  id           Int           @id @default(autoincrement())
-  description  String        // Descritivo da solicitação
-  tipoChamado  String        // Operacionais | Emergenciais
-  categoria    String        // Categoria (ex: Elétrica, Câmeras)
-  subItem      String?       // Sub item opcional
-  observacao   String?       // Observação livre
-  openedBy     String?       // Nome de quem abriu o chamado
-  createdById  String?       // ID de quem abriu o chamado
-  status       RequestStatus @default(PENDENTE)
-  clientId     String
-  client       Client        @relation(fields: [clientId], references: [id])
-  technicianId String?
-  technician   User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                Int           @id @default(autoincrement())
+  description       String        // Descritivo da solicitação
+  tipoChamado       String        // Operacionais | Emergenciais
+  categoria         String        // Categoria (ex: Elétrica, Câmeras)
+  subItem           String?       // Sub item opcional
+  observacao        String?       // Observação livre
+  openedBy          String?       // Nome de quem abriu o chamado
+  createdById       String?       // ID de quem abriu o chamado
+  // Campos de classificação
+  nivelCriticidade  String?       // "1", "2", "3" ou "4"
+  classifiedBy      String?       // Nome de quem classificou
+  classifiedById    String?       // ID de quem classificou
+  classifiedAt      DateTime?     // Data/hora da classificação
+  dataAtendimento   DateTime?     // Data prevista de atendimento
+  status            RequestStatus @default(PENDENTE)
+  clientId          String
+  client            Client        @relation(fields: [clientId], references: [id])
+  technicianId      String?
+  technician        User?         @relation("TechnicianAssigned", fields: [technicianId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }

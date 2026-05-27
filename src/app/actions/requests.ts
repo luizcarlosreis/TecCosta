@@ -245,3 +245,77 @@ export async function deleteRequestAction(id: number) {
     return { error: 'Erro ao tentar excluir a solicitação.' };
   }
 }
+
+export async function classifyRequestAction(id: number, formData: FormData) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado. Por favor, realize o login novamente.' };
+  }
+
+  // Apenas Administradores e TecCosta Gestão podem classificar chamados
+  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+    return { error: 'Você não tem permissão para classificar chamados. Apenas a equipe TecCosta pode realizar esta ação.' };
+  }
+
+  const nivelCriticidade = formData.get('nivelCriticidade') as string;
+  const dataAtendimentoStr = formData.get('dataAtendimento') as string;
+
+  if (!nivelCriticidade || !['1', '2', '3', '4'].includes(nivelCriticidade)) {
+    return { error: 'Por favor, selecione um nível de criticidade válido.' };
+  }
+
+  try {
+    const existing = await prisma.maintenanceRequest.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return { error: 'Chamado não encontrado.' };
+    }
+
+    if (existing.status !== 'PENDENTE') {
+      return { error: 'Este chamado já foi classificado e não pode ser reclassificado.' };
+    }
+
+    const now = new Date();
+
+    // Calcular data de atendimento automaticamente conforme o nível
+    let dataAtendimento: Date;
+    if (nivelCriticidade === '4') {
+      // Nível 4: data informada manualmente pelo classificador
+      if (!dataAtendimentoStr) {
+        return { error: 'Para o Nível 4 (Agendado), informe a data de atendimento.' };
+      }
+      dataAtendimento = new Date(dataAtendimentoStr);
+      if (isNaN(dataAtendimento.getTime())) {
+        return { error: 'Data de atendimento inválida.' };
+      }
+    } else {
+      // Calcular automaticamente
+      const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
+      const horas = horasMap[nivelCriticidade];
+      dataAtendimento = new Date(now.getTime() + horas * 60 * 60 * 1000);
+    }
+
+    await prisma.maintenanceRequest.update({
+      where: { id },
+      data: {
+        nivelCriticidade,
+        classifiedBy: sessionUser.name,
+        classifiedById: sessionUser.id,
+        classifiedAt: now,
+        dataAtendimento,
+        status: 'EM_ANDAMENTO'
+      }
+    });
+
+    console.log(`Chamado #${id} classificado com Nível ${nivelCriticidade} por ${sessionUser.name}`);
+    revalidatePath('/dashboard/chamados/classificacao');
+    revalidatePath('/dashboard/chamados/solicitacao');
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error classifying request:', error);
+    return { error: 'Ocorreu um erro ao classificar o chamado.' };
+  }
+}
