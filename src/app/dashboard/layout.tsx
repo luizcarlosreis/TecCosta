@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { logoutAction } from '@/app/actions/auth';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,6 +18,19 @@ export default function DashboardLayout({
   const [isChamadosOpen, setIsChamadosOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     fetch('/api/session')
@@ -184,7 +197,7 @@ export default function DashboardLayout({
 
       <main className="dashboard-main">
         <header className="dashboard-header glass">
-          <div className="header-user-wrapper" style={{ position: 'relative' }}>
+          <div ref={userMenuRef} className="header-user-wrapper" style={{ position: 'relative' }}>
             <button 
               className="header-user" 
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -475,6 +488,10 @@ export default function DashboardLayout({
           display: flex;
           align-items: center;
           gap: 15px;
+        }
+
+        .header-user:hover {
+          background-color: #f1f5f9 !important;
         }
 
         .user-info {
