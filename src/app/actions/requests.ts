@@ -422,6 +422,32 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
 
     // Se agendado/reagendado com sucesso (possui data e técnico), grava um registro de histórico
     if (status !== 'CANCELADO' && parsedDate && technicianId) {
+      // 1. Se já existia agendamento anterior no chamado, mas nenhum histórico foi gravado ainda (chamados legados),
+      // registramos primeiro o agendamento original no histórico para preservar a data inicial.
+      if (existing.dataAtendimento && existing.technicianId) {
+        const historyCount = await prisma.schedulingHistory.count({
+          where: { requestId: id }
+        });
+
+        if (historyCount === 0) {
+          const originalTech = await prisma.user.findUnique({
+            where: { id: existing.technicianId }
+          });
+          const originalTechName = originalTech?.name || 'Técnico Anterior';
+
+          await prisma.schedulingHistory.create({
+            data: {
+              requestId: id,
+              scheduledDate: existing.dataAtendimento,
+              technicianId: existing.technicianId,
+              technicianName: originalTechName,
+              changedBy: existing.classifiedBy || 'Sistema (Legado)'
+            }
+          });
+        }
+      }
+
+      // 2. Grava o novo agendamento/reagendamento no histórico
       await prisma.schedulingHistory.create({
         data: {
           requestId: id,
