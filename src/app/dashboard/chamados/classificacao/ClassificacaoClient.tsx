@@ -538,30 +538,6 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                   </div>
                 </div>
               )}
-
-              {/* Classificado por */}
-              <div className={styles.formGroup}>
-                <label>Classificado por</label>
-                <input
-                  type="text"
-                  value={sessionUser.name}
-                  className={styles.readonlyField}
-                  readOnly
-                  disabled
-                />
-              </div>
-
-              {/* Data/Hora da classificação */}
-              <div className={styles.formGroup}>
-                <label>Data/Hora da Classificação</label>
-                <input
-                  type="text"
-                  value={formatDateTimeCalc(new Date())}
-                  className={styles.readonlyField}
-                  readOnly
-                  disabled
-                />
-              </div>
             </div>
 
             <div className={styles.modalActions}>
