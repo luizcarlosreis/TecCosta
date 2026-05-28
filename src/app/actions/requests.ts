@@ -388,6 +388,10 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
       return { error: 'Chamado não encontrado.' };
     }
 
+    if (existing.status === 'CONCLUIDO' || existing.status === 'CANCELADO') {
+      return { error: 'Não é possível reagendar ou atualizar um chamado com status fechado.' };
+    }
+
     const updateData: Record<string, unknown> = { status };
 
     let parsedDate: Date | null = null;

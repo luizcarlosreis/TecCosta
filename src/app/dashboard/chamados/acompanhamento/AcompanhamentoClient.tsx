@@ -151,6 +151,7 @@ export default function AcompanhamentoClient({
   const totalFechados = requests.filter((r) => isClosed(r.status)).length;
 
   const handleEditClick = (req: SerializedRequest) => {
+    if (isClosed(req.status)) return;
     setEditingRequest(req);
     setFormStatus(req.status);
     setFormDataAtendimento(toInputDateTimeValue(req.dataAtendimento));
@@ -543,7 +544,12 @@ export default function AcompanhamentoClient({
                     {isAdmin && (
                       <td>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button className={styles.btnEdit} onClick={() => handleEditClick(req)}>
+                          <button
+                            className={styles.btnEdit}
+                            onClick={() => handleEditClick(req)}
+                            disabled={isClosed(req.status)}
+                            title={isClosed(req.status) ? "Chamados concluídos ou cancelados não podem ser agendados/reagendados" : undefined}
+                          >
                             {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
                           </button>
                           {req.schedulings && req.schedulings.length > 0 && (
