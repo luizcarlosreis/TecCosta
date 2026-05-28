@@ -132,6 +132,16 @@ export default function AcompanhamentoChamadoClient({
     return { label: 'Em atendimento', class: styles.serviceInProgress };
   };
 
+  // Helper para obter a data local YYYY-MM-DD a partir de uma data UTC string
+  const getLocalDateString = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Filtragem e busca
   const filteredRequests = requests.filter((r) => {
     const q = searchQuery.toLowerCase();
@@ -153,7 +163,7 @@ export default function AcompanhamentoChamadoClient({
     const matchClient = filterClient === '' || r.client.id === filterClient;
     const matchTechnician = filterTechnician === '' ||
       (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
-    const matchDate = filterDate === '' || (r.dataAtendimento && r.dataAtendimento.startsWith(filterDate));
+    const matchDate = filterDate === '' || (r.dataAtendimento && getLocalDateString(r.dataAtendimento) === filterDate);
 
     return matchQuery && matchStatus && matchClient && matchTechnician && matchDate;
   });
