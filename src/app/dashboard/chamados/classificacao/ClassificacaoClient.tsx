@@ -170,6 +170,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
   const [filterClient, setFilterClient] = useState('');
   const [filterTechnician, setFilterTechnician] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterDate, setFilterDate] = useState('');
   const PAGE_SIZE = 4;
 
   // Campos do formulário de classificação
@@ -212,7 +213,8 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     const matchClient = filterClient === '' || r.client.id === filterClient;
     const matchTechnician = filterTechnician === '' ||
       (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
-    return matchQuery && matchClient && matchTechnician;
+    const matchDate = filterDate === '' || (r.dataAtendimento && r.dataAtendimento.startsWith(filterDate));
+    return matchQuery && matchClient && matchTechnician && matchDate;
   });
 
   // Paginação
@@ -241,6 +243,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     setSelectedRequest(null);
     setError(null);
     setSuccess(null);
+    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -270,6 +273,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
         setLoading(false);
       } else {
         setSuccess(`Chamado #${String(selectedRequest.id).padStart(3, '0')} classificado com sucesso como ${NIVEIS[nivelCriticidade as keyof typeof NIVEIS]?.label}!`);
+        setLoading(false); // Reseta loading imediatamente no sucesso
         // Remover da lista local
         setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id));
         setTimeout(() => {
@@ -527,7 +531,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
         />
       </div>
 
-      <div className={styles.selectFilterGroup} style={{ marginBottom: '20px' }}>
+      <div className={styles.selectFilterGroup} style={{ marginBottom: '20px', alignItems: 'center' }}>
         <select
           className={styles.filterSelect}
           value={filterClient}
@@ -549,6 +553,35 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <input
+            type="date"
+            className={styles.filterSelect}
+            value={filterDate}
+            onChange={(e) => handleFilterChange(() => setFilterDate(e.target.value))}
+            style={{ paddingRight: filterDate ? '34px' : '14px' }}
+            title="Filtrar por data de agendamento"
+          />
+          {filterDate && (
+            <button
+              type="button"
+              onClick={() => handleFilterChange(() => setFilterDate(''))}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                color: '#94a3b8',
+                padding: '4px',
+              }}
+              title="Limpar data"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {filteredRequests.length === 0 ? (

@@ -139,6 +139,7 @@ export default function SolicitacaoClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterTechnician, setFilterTechnician] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 4;
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -293,11 +294,16 @@ export default function SolicitacaoClient({
         setLoading(false);
       } else {
         setSuccess(editingRequestId ? 'Solicitação de chamado atualizada com sucesso!' : 'Solicitação de chamado enviada com sucesso!');
+        setLoading(false); // Reseta loading imediatamente no sucesso
         
-        // Recarregar lista do banco de dados
-        const updated = await getRequestsAction();
-        if (updated.requests) {
-          setRequests(updated.requests as unknown as SerializedRequest[]);
+        // Recarregar lista do banco de dados de forma resiliente
+        try {
+          const updated = await getRequestsAction();
+          if (updated?.requests) {
+            setRequests(updated.requests as unknown as SerializedRequest[]);
+          }
+        } catch (fetchErr) {
+          console.error('Erro ao recarregar a lista de chamados:', fetchErr);
         }
 
         setTimeout(() => {
@@ -353,7 +359,8 @@ export default function SolicitacaoClient({
     const matchClient = filterClient === '' || r.client.id === filterClient;
     const matchTechnician = filterTechnician === '' ||
       (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
-    return matchQuery && matchClient && matchTechnician;
+    const matchDate = filterDate === '' || (r.dataAtendimento && r.dataAtendimento.startsWith(filterDate));
+    return matchQuery && matchClient && matchTechnician && matchDate;
   });
 
   // Listas únicas para os filtros
@@ -631,7 +638,7 @@ export default function SolicitacaoClient({
         />
       </div>
 
-      <div className={styles.selectFilterGroup} style={{ marginBottom: '20px' }}>
+      <div className={styles.selectFilterGroup} style={{ marginBottom: '20px', alignItems: 'center' }}>
         <select
           className={styles.filterSelect}
           value={filterClient}
@@ -653,6 +660,35 @@ export default function SolicitacaoClient({
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <input
+            type="date"
+            className={styles.filterSelect}
+            value={filterDate}
+            onChange={(e) => handleFilterChange(() => setFilterDate(e.target.value))}
+            style={{ paddingRight: filterDate ? '34px' : '14px' }}
+            title="Filtrar por data de agendamento"
+          />
+          {filterDate && (
+            <button
+              type="button"
+              onClick={() => handleFilterChange(() => setFilterDate(''))}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                color: '#94a3b8',
+                padding: '4px',
+              }}
+              title="Limpar data"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {filteredRequests.length === 0 ? (

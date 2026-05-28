@@ -90,6 +90,7 @@ export default function AcompanhamentoChamadoClient({
   const [filterClient, setFilterClient] = useState('');
   const [filterTechnician, setFilterTechnician] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterDate, setFilterDate] = useState('');
   const PAGE_SIZE = 4;
   const [view, setView] = useState<'list' | 'finalize'>('list');
   const [selectedRequest, setSelectedRequest] = useState<SerializedRequest | null>(null);
@@ -152,8 +153,9 @@ export default function AcompanhamentoChamadoClient({
     const matchClient = filterClient === '' || r.client.id === filterClient;
     const matchTechnician = filterTechnician === '' ||
       (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
+    const matchDate = filterDate === '' || (r.dataAtendimento && r.dataAtendimento.startsWith(filterDate));
 
-    return matchQuery && matchStatus && matchClient && matchTechnician;
+    return matchQuery && matchStatus && matchClient && matchTechnician && matchDate;
   });
 
   // Listas únicas para os filtros
@@ -197,6 +199,7 @@ export default function AcompanhamentoChamadoClient({
     setSelectedRequest(null);
     setError(null);
     setSuccess(null);
+    setLoading(false);
   };
 
   const handleSubmitFinalize = async (e: React.FormEvent) => {
@@ -219,6 +222,7 @@ export default function AcompanhamentoChamadoClient({
         setLoading(false);
       } else {
         setSuccess('Chamado finalizado com sucesso!');
+        setLoading(false); // Reseta loading imediatamente no sucesso
         
         // Atualiza a lista local de chamados
         const updatedRequests = requests.map(r => {
@@ -379,7 +383,7 @@ export default function AcompanhamentoChamadoClient({
             className={styles.searchInput}
           />
         </div>
-        <div className={styles.selectFilterGroup}>
+        <div className={styles.selectFilterGroup} style={{ alignItems: 'center' }}>
           <select
             className={styles.filterSelect}
             value={filterClient}
@@ -401,6 +405,35 @@ export default function AcompanhamentoChamadoClient({
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <input
+              type="date"
+              className={styles.filterSelect}
+              value={filterDate}
+              onChange={(e) => handleFilterChange(() => setFilterDate(e.target.value))}
+              style={{ paddingRight: filterDate ? '34px' : '14px' }}
+              title="Filtrar por data de agendamento"
+            />
+            {filterDate && (
+              <button
+                type="button"
+                onClick={() => handleFilterChange(() => setFilterDate(''))}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  color: '#94a3b8',
+                  padding: '4px',
+                }}
+                title="Limpar data"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
         <div className={styles.statusFilterGroup}>
           {(['todos', 'abertos', 'fechados'] as const).map((f) => (
