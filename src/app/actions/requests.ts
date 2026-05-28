@@ -577,3 +577,83 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
     return { error: 'Ocorreu um erro ao finalizar o chamado.' };
   }
 }
+
+export async function getDashboardStatsAction() {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return { error: 'Não autorizado.' };
+  }
+
+  try {
+    let whereClause: any = {};
+
+    if (sessionUser.role === 'CONDOMINIO_EMPRESA' || sessionUser.role === 'ADMINISTRADORA_CONDOMINIO') {
+      const managedClients = await prisma.client.findMany({
+        where: { managers: { some: { id: sessionUser.id } } },
+        select: { id: true }
+      });
+      const clientIds = managedClients.map(c => c.id);
+      whereClause.clientId = { in: clientIds };
+    } else if (sessionUser.role === 'TECNICO') {
+      whereClause.technicianId = sessionUser.id;
+    }
+
+    // 1. Solicitados (PENDENTE)
+    const solicitados = await prisma.maintenanceRequest.count({
+      where: {
+        ...whereClause,
+        status: 'PENDENTE'
+      }
+    });
+
+    // 2. Classificados (nivelCriticidade não é nulo)
+    const classificados = await prisma.maintenanceRequest.count({
+      where: {
+        ...whereClause,
+        nivelCriticidade: { not: null }
+      }
+    });
+
+    // 3. Para serem agendados (nivelCriticidade não nulo, mas sem dataAtendimento e não fechado)
+    const paraAgendar = await prisma.maintenanceRequest.count({
+      where: {
+        ...whereClause,
+        nivelCriticidade: { not: null },
+        dataAtendimento: null,
+        status: 'EM_ANDAMENTO'
+      }
+    });
+
+    // 4. Finalizados (CONCLUIDO ou CANCELADO)
+    const finalizados = await prisma.maintenanceRequest.count({
+      where: {
+        ...whereClause,
+        status: { in: ['CONCLUIDO', 'CANCELADO'] }
+      }
+    });
+
+    // 5. Últimas 5 solicitações recentes (abertas, ou seja, ordenadas por data de criação decrescente)
+    const recentRequests = await prisma.maintenanceRequest.findMany({
+      where: whereClause,
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: { client: true }
+    });
+
+    // Serializar datas para evitar problemas com Server Components
+    const serializedRecent = JSON.parse(JSON.stringify(recentRequests));
+
+    return {
+      stats: {
+        solicitados,
+        classificados,
+        paraAgendar,
+        finalizados
+      },
+      recentRequests: serializedRecent
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return { error: 'Erro ao carregar estatísticas do painel.' };
+  }
+}
