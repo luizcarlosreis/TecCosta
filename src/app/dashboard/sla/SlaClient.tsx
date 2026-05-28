@@ -27,8 +27,8 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // View state: 'list' | 'form'
+  const [view, setView] = useState<'list' | 'form'>('list');
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedConfig, setSelectedConfig] = useState<SlaConfig | null>(null);
 
@@ -36,13 +36,6 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
   const [nivelInput, setNivelInput] = useState('1');
   const [horasSlaInput, setHorasSlaInput] = useState('');
   const [horasSomadasInput, setHorasSomadasInput] = useState('');
-
-  const refreshData = async () => {
-    try {
-      const res = await fetch('/api/session'); // A session call is fine, but we can also rely on client-side state
-      // Instead of reload, we can update state directly after actions to keep it lightning-fast and seamless
-    } catch (e) {}
-  };
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -52,7 +45,7 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
     setHorasSomadasInput('');
     setError(null);
     setSuccess(null);
-    setIsModalOpen(true);
+    setView('form');
   };
 
   const handleOpenEdit = (config: SlaConfig) => {
@@ -63,12 +56,14 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
     setHorasSomadasInput(String(config.horasSomadas));
     setError(null);
     setSuccess(null);
-    setIsModalOpen(true);
+    setView('form');
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseForm = () => {
+    setView('list');
     setSelectedConfig(null);
+    setError(null);
+    setSuccess(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,8 +120,7 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
         }
 
         setTimeout(() => {
-          setIsModalOpen(false);
-          setSuccess(null);
+          handleCloseForm();
         }, 1200);
       }
     } catch (err) {
@@ -169,6 +163,97 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
       default: return { label: `Nível ${nivel}`, class: '' };
     }
   };
+
+  if (view === 'form') {
+    return (
+      <div className={styles.pageContainer}>
+        <button className={styles.backBtn} onClick={handleCloseForm}>
+          ← Voltar para a lista
+        </button>
+
+        <div className={styles.pageHeader}>
+          <div>
+            <h1>{modalMode === 'create' ? 'Nova Regra de SLA' : `Editar Regra — Nível ${nivelInput}`}</h1>
+            <p>
+              {modalMode === 'create'
+                ? 'Defina os critérios de prazos comerciais e corridos para o novo nível.'
+                : 'Altere as horas do SLA contratual e do cálculo comercial.'}
+            </p>
+          </div>
+        </div>
+
+        {error && <div className={`${styles.feedbackMessage} ${styles.feedbackError}`}>⚠️ {error}</div>}
+        {success && <div className={`${styles.feedbackMessage} ${styles.feedbackSuccess}`}>✓ {success}</div>}
+
+        <div className={styles.formCard}>
+          <form onSubmit={handleSubmit}>
+            <div className={styles.formGroup}>
+              <label htmlFor="nivel">Nível do Chamado <span className={styles.required}>*</span></label>
+              <select
+                id="nivel"
+                value={nivelInput}
+                onChange={(e) => setNivelInput(e.target.value)}
+                disabled={modalMode === 'edit' || loading}
+                required
+              >
+                <option value="1">Nível 1 (Operacional)</option>
+                <option value="2">Nível 2 (Intermediário)</option>
+                <option value="3">Nível 3 (Programado)</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="horasSla">Prazo Corrido (SLA em Contrato - Horas) <span className={styles.required}>*</span></label>
+              <input
+                id="horasSla"
+                type="number"
+                placeholder="Ex: 4"
+                value={horasSlaInput}
+                onChange={(e) => setHorasSlaInput(e.target.value)}
+                min="1"
+                max="1000"
+                disabled={loading}
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="horasSomadas">Horas a serem somadas (Cálculo em Horário Comercial) <span className={styles.required}>*</span></label>
+              <input
+                id="horasSomadas"
+                type="number"
+                placeholder="Ex: 5"
+                value={horasSomadasInput}
+                onChange={(e) => setHorasSomadasInput(e.target.value)}
+                min="1"
+                max="1000"
+                disabled={loading}
+                required
+              />
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.btnCancel}
+                onClick={handleCloseForm}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className={styles.btnSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Processando...' : modalMode === 'create' ? 'Adicionar Regra' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.pageContainer}>
@@ -243,85 +328,6 @@ export default function SlaClient({ initialConfigs }: SlaClientProps) {
           </table>
         )}
       </div>
-
-      {/* Modal CRUD */}
-      {isModalOpen && (
-        <div className={styles.modalOverlay} onClick={handleCloseModal}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2>{modalMode === 'create' ? 'Nova Regra de SLA' : `Editar Regra — Nível ${nivelInput}`}</h2>
-            <p className={styles.modalSubtitle}>
-              {modalMode === 'create'
-                ? 'Defina os critérios de prazos comerciais e corridos para o novo nível.'
-                : 'Altere as horas do SLA contratual e do cálculo comercial.'}
-            </p>
-
-            <form onSubmit={handleSubmit}>
-              <div className={styles.formGroup}>
-                <label htmlFor="nivel">Nível do Chamado <span className={styles.required}>*</span></label>
-                <select
-                  id="nivel"
-                  value={nivelInput}
-                  onChange={(e) => setNivelInput(e.target.value)}
-                  disabled={modalMode === 'edit' || loading}
-                  required
-                >
-                  <option value="1">Nível 1 (Operacional)</option>
-                  <option value="2">Nível 2 (Intermediário)</option>
-                  <option value="3">Nível 3 (Programado)</option>
-                </select>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="horasSla">Prazo Corrido (SLA em Contrato - Horas) <span className={styles.required}>*</span></label>
-                <input
-                  id="horasSla"
-                  type="number"
-                  placeholder="Ex: 4"
-                  value={horasSlaInput}
-                  onChange={(e) => setHorasSlaInput(e.target.value)}
-                  min="1"
-                  max="1000"
-                  disabled={loading}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="horasSomadas">Horas a serem somadas (Cálculo em Horário Comercial) <span className={styles.required}>*</span></label>
-                <input
-                  id="horasSomadas"
-                  type="number"
-                  placeholder="Ex: 5"
-                  value={horasSomadasInput}
-                  onChange={(e) => setHorasSomadasInput(e.target.value)}
-                  min="1"
-                  max="1000"
-                  disabled={loading}
-                  required
-                />
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.btnCancel}
-                  onClick={handleCloseModal}
-                  disabled={loading}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className={styles.btnSubmit}
-                  disabled={loading}
-                >
-                  {loading ? 'Processando...' : modalMode === 'create' ? 'Adicionar Regra' : 'Salvar Alterações'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
