@@ -14,6 +14,11 @@ interface RecentRequest {
   client: {
     name: string;
   };
+  nivelCriticidade: string | null;
+  technician: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export default function DashboardPage() {
@@ -69,24 +74,29 @@ export default function DashboardPage() {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'PENDENTE': return 'Aberto – Pendente';
-      case 'EM_ANDAMENTO': return 'Aberto – Em Andamento';
-      case 'CONCLUIDO': return 'Fechado – Concluído';
-      case 'CANCELADO': return 'Fechado – Cancelado';
-      default: return status;
+  // Mapeamentos de status iguais ao do acompanhamento
+  const getTicketStatus = (req: RecentRequest) => {
+    if (req.status === 'CONCLUIDO' || req.status === 'CANCELADO') {
+      return { label: 'Fechado', class: 'status-closed' };
     }
+    if (req.nivelCriticidade === null) {
+      return { label: 'Aberto/Pendente de Classificação', class: 'status-unclassified' };
+    }
+    if (req.technician === null) {
+      return { label: 'Classificado/Pendente de Agendamento', class: 'status-unscheduled' };
+    }
+    return { label: 'Agendado', class: 'status-scheduled' };
   };
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'PENDENTE': return 'status-pending';
-      case 'EM_ANDAMENTO': return 'status-progress';
-      case 'CONCLUIDO': return 'status-completed';
-      case 'CANCELADO': return 'status-cancelled';
-      default: return '';
+  const getAtendimentoStatus = (req: RecentRequest) => {
+    if (req.status === 'CONCLUIDO' || req.status === 'CANCELADO') {
+      return { label: 'Finalizado', class: 'service-finished' };
     }
+    const ticketStatus = getTicketStatus(req).label;
+    if (ticketStatus === 'Aberto/Pendente de Classificação' || ticketStatus === 'Classificado/Pendente de Agendamento') {
+      return { label: 'Em aberto', class: 'service-open' };
+    }
+    return { label: 'Em atendimento', class: 'service-in-progress' };
   };
 
   return (
@@ -153,23 +163,32 @@ export default function DashboardPage() {
                     <div className="skeleton skeleton-title"></div>
                     <div className="skeleton skeleton-client"></div>
                   </div>
-                  <div className="skeleton skeleton-badge"></div>
+                  <div className="skeleton skeleton-badge-vertical"></div>
                 </div>
               ))
             ) : (
-              recentRequests.map((request) => (
-                <div key={request.id} className="request-item">
-                  <div className="request-id">#{String(request.id).padStart(3, '0')}</div>
-                  <div className="request-info">
-                    <p className="request-title">{request.categoria}</p>
-                    <p className="request-desc">{request.description}</p>
-                    <p className="request-client">🏢 {request.client.name}</p>
+              recentRequests.map((request) => {
+                const ticketSt = getTicketStatus(request);
+                const serviceSt = getAtendimentoStatus(request);
+                return (
+                  <div key={request.id} className="request-item">
+                    <div className="request-id">#{String(request.id).padStart(3, '0')}</div>
+                    <div className="request-info">
+                      <p className="request-title">{request.categoria}</p>
+                      <p className="request-desc">{request.description}</p>
+                      <p className="request-client">🏢 {request.client.name}</p>
+                    </div>
+                    <div className="status-badge-container">
+                      <span className={`status-label ${ticketSt.class}`}>
+                        {ticketSt.label}
+                      </span>
+                      <span className={`status-label ${serviceSt.class}`}>
+                        {serviceSt.label}
+                      </span>
+                    </div>
                   </div>
-                  <div className={`request-status ${getStatusClass(request.status)}`}>
-                    {getStatusLabel(request.status)}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
             
             {!loading && recentRequests.length === 0 && (
@@ -312,7 +331,7 @@ export default function DashboardPage() {
           font-size: 0.875rem;
           color: #475569;
           margin: 0 0 6px 0;
-          max-width: 800px;
+          max-width: 650px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -325,38 +344,35 @@ export default function DashboardPage() {
           margin: 0;
         }
 
-        .request-status {
-          padding: 6px 14px;
-          border-radius: 20px;
+        /* Statuses exactly aligned with the accompaniment page */
+        .status-badge-container {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          align-items: flex-end;
+        }
+
+        .status-label {
+          display: inline-flex;
+          align-items: center;
+          padding: 5px 12px;
+          border-radius: 12px;
           font-size: 0.725rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
         }
 
-        .status-pending {
-          background: #fef3c7;
-          color: #d97706;
-          border: 1px solid rgba(217, 119, 6, 0.2);
-        }
+        /* Chamado Status */
+        .status-closed       { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-unclassified { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .status-unscheduled  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .status-scheduled    { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
 
-        .status-progress {
-          background: #ede9fe;
-          color: #7c3aed;
-          border: 1px solid rgba(124, 58, 237, 0.2);
-        }
-
-        .status-completed {
-          background: #dcfce7;
-          color: #059669;
-          border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .status-cancelled {
-          background: #fee2e2;
-          color: #dc2626;
-          border: 1px solid rgba(220, 38, 38, 0.2);
-        }
+        /* Atendimento Status */
+        .service-finished    { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .service-open        { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .service-in-progress  { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
 
         /* Skeletons */
         .skeleton {
@@ -401,10 +417,13 @@ export default function DashboardPage() {
           width: 250px;
         }
 
-        .skeleton-badge {
-          height: 24px;
-          width: 80px;
-          border-radius: 20px;
+        .skeleton-badge-vertical {
+          height: 46px;
+          width: 180px;
+          border-radius: 12px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: loading 1.5s infinite;
         }
 
         @keyframes loading {

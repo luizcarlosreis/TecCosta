@@ -646,7 +646,7 @@ export async function getDashboardStatsAction() {
       where: whereClause,
       take: 5,
       orderBy: { createdAt: 'desc' },
-      include: { client: true }
+      include: { client: true, technician: true }
     });
 
     // Serializar datas para evitar problemas com Server Components
