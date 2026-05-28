@@ -552,15 +552,17 @@ export default function AcompanhamentoClient({
                           >
                             {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
                           </button>
-                          {req.schedulings && req.schedulings.length > 0 && (
-                            <button
-                              className={styles.btnHistory}
-                              onClick={() => setHistoryRequest(req)}
-                              title="Visualizar histórico de reagendamentos"
-                            >
-                              ⏳ Histórico ({req.schedulings.length})
-                            </button>
-                          )}
+                          <button
+                            className={styles.btnHistory}
+                            onClick={() => setHistoryRequest(req)}
+                            disabled={!req.schedulings || req.schedulings.length === 0}
+                            title={(!req.schedulings || req.schedulings.length === 0)
+                              ? "Não há histórico de agendamentos para este chamado"
+                              : "Visualizar histórico de reagendamentos"
+                            }
+                          >
+                            ⏳ Histórico ({req.schedulings?.length || 0})
+                          </button>
                         </div>
                       </td>
                     )}
