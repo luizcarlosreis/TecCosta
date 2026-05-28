@@ -166,7 +166,9 @@ export default function AcompanhamentoClient({
       (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
     const matchDate = filterDate === '' || (r.dataAtendimento && r.dataAtendimento.startsWith(filterDate));
 
-    return matchQuery && matchStatus && matchClient && matchTechnician && matchDate;
+    const isClassified = r.nivelCriticidade !== null;
+
+    return isClassified && matchQuery && matchStatus && matchClient && matchTechnician && matchDate;
   });
 
   // Paginação
@@ -180,8 +182,8 @@ export default function AcompanhamentoClient({
   };
 
   // Counters
-  const totalAbertos = requests.filter((r) => !isClosed(r.status)).length;
-  const totalFechados = requests.filter((r) => isClosed(r.status)).length;
+  const totalAbertos = requests.filter((r) => r.nivelCriticidade !== null && !isClosed(r.status)).length;
+  const totalFechados = requests.filter((r) => r.nivelCriticidade !== null && isClosed(r.status)).length;
 
   const handleEditClick = (req: SerializedRequest) => {
     if (isClosed(req.status)) return;
