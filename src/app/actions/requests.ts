@@ -18,6 +18,44 @@ async function getSessionUser() {
   }
 }
 
+// Helper para calcular o SLA considerando o horário comercial das 08:00 às 18:00.
+// Se ultrapassar 18:00, as horas restantes continuam a contar a partir das 08:00 do próximo dia comercial.
+export function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
+  const date = new Date(startDate);
+
+  // Se a hora inicial estiver fora do horário comercial:
+  // Se for antes das 08:00, ajusta para 08:00 do mesmo dia.
+  // Se for a partir das 18:00, ajusta para 08:00 do dia seguinte.
+  if (date.getHours() < 8) {
+    date.setHours(8, 0, 0, 0);
+  } else if (date.getHours() >= 18) {
+    date.setDate(date.getDate() + 1);
+    date.setHours(8, 0, 0, 0);
+  }
+
+  let remainingHours = hoursToAdd;
+  while (remainingHours > 0) {
+    const currentHour = date.getHours();
+    const availableHoursToday = 18 - currentHour;
+
+    if (availableHoursToday <= 0) {
+      date.setDate(date.getDate() + 1);
+      date.setHours(8, 0, 0, 0);
+      continue;
+    }
+
+    if (remainingHours <= availableHoursToday) {
+      date.setHours(currentHour + remainingHours);
+      remainingHours = 0;
+    } else {
+      remainingHours -= availableHoursToday;
+      date.setDate(date.getDate() + 1);
+      date.setHours(8, 0, 0, 0);
+    }
+  }
+  return date;
+}
+
 export async function createRequestAction(formData: FormData) {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
@@ -291,7 +329,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
     } else {
       const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
       const horas = horasMap[nivelCriticidade];
-      prazoSla = new Date(now.getTime() + horas * 60 * 60 * 1000);
+      prazoSla = calculateBusinessSla(now, horas);
     }
 
     await prisma.maintenanceRequest.update({
@@ -400,6 +438,16 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
       if (isNaN(parsedDate.getTime())) {
         return { error: 'Data e hora de agendamento inválidas.' };
       }
+
+      // Validar horário comercial diretamente a partir do texto do input (evita discrepâncias de fuso horário do servidor)
+      const hourPart = dataAtendimentoStr.split('T')[1];
+      if (hourPart) {
+        const hour = parseInt(hourPart.split(':')[0], 10);
+        if (hour < 8 || hour >= 18) {
+          return { error: 'O horário do agendamento deve ser comercial, das 08:00 às 18:00.' };
+        }
+      }
+
       updateData.dataAtendimento = parsedDate;
     }
 

@@ -41,17 +41,53 @@ const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }>
   '4': { label: 'N4 – Agendado',    color: '#7c3aed', bg: '#ede9fe' },
 };
 
+function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
+  const date = new Date(startDate);
+
+  // Se a hora inicial estiver fora do horário comercial:
+  // Se for antes das 08:00, ajusta para 08:00 do mesmo dia.
+  // Se for a partir das 18:00, ajusta para 08:00 do dia seguinte.
+  if (date.getHours() < 8) {
+    date.setHours(8, 0, 0, 0);
+  } else if (date.getHours() >= 18) {
+    date.setDate(date.getDate() + 1);
+    date.setHours(8, 0, 0, 0);
+  }
+
+  let remainingHours = hoursToAdd;
+  while (remainingHours > 0) {
+    const currentHour = date.getHours();
+    const availableHoursToday = 18 - currentHour;
+
+    if (availableHoursToday <= 0) {
+      date.setDate(date.getDate() + 1);
+      date.setHours(8, 0, 0, 0);
+      continue;
+    }
+
+    if (remainingHours <= availableHoursToday) {
+      date.setHours(currentHour + remainingHours);
+      remainingHours = 0;
+    } else {
+      remainingHours -= availableHoursToday;
+      date.setDate(date.getDate() + 1);
+      date.setHours(8, 0, 0, 0);
+    }
+  }
+  return date;
+}
+
 function getPrazoFinal(req: SerializedRequest): string | null {
   if (!req.classifiedAt || !req.nivelCriticidade) return null;
   const classifiedDate = new Date(req.classifiedAt);
   if (req.nivelCriticidade === '1') {
-    return new Date(classifiedDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+    return calculateBusinessSla(classifiedDate, 4).toISOString();
   }
   if (req.nivelCriticidade === '2') {
-    return new Date(classifiedDate.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    return calculateBusinessSla(classifiedDate, 24).toISOString();
   }
   if (req.nivelCriticidade === '3') {
-    return new Date(classifiedDate.getTime() + 72 * 60 * 60 * 1000).toISOString();
+    return calculateBusinessSla(classifiedDate, 72).toISOString();
   }
   if (req.nivelCriticidade === '4') {
     return req.dataAtendimento;
