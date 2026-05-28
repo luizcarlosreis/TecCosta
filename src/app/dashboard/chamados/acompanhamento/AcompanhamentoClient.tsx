@@ -112,6 +112,10 @@ export default function AcompanhamentoClient({
   const [requests, setRequests] = useState<SerializedRequest[]>(initialRequests);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'todos' | 'abertos' | 'fechados'>('todos');
+  const [filterClient, setFilterClient] = useState('');
+  const [filterTechnician, setFilterTechnician] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 4;
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingRequest, setEditingRequest] = useState<SerializedRequest | null>(null);
   const [historyRequest, setHistoryRequest] = useState<SerializedRequest | null>(null);
@@ -126,6 +130,19 @@ export default function AcompanhamentoClient({
   const [success, setSuccess] = useState<string | null>(null);
 
   const isAdmin = sessionUser.role === 'ADMINISTRADOR' || sessionUser.role === 'TECCOSTA_GESTAO';
+
+  // Listas únicas para os filtros de cliente e técnico
+  const uniqueClients = Array.from(
+    new Map(requests.map((r) => [r.client.id, r.client.name])).entries()
+  ).map(([id, name]) => ({ id, name }));
+
+  const uniqueTechnicians = Array.from(
+    new Map(
+      requests
+        .filter((r) => r.technician)
+        .map((r) => [r.technician!.id, r.technician!.name])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }));
 
   const filteredRequests = requests.filter((r) => {
     const q = searchQuery.toLowerCase();
@@ -143,8 +160,22 @@ export default function AcompanhamentoClient({
       filterStatus === 'abertos' ? !isClosed(r.status) :
       isClosed(r.status);
 
-    return matchQuery && matchStatus;
+    const matchClient = filterClient === '' || r.client.id === filterClient;
+    const matchTechnician = filterTechnician === '' ||
+      (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
+
+    return matchQuery && matchStatus && matchClient && matchTechnician;
   });
+
+  // Paginação
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRequests = filteredRequests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleFilterChange = (fn: () => void) => {
+    fn();
+    setCurrentPage(1);
+  };
 
   // Counters
   const totalAbertos = requests.filter((r) => !isClosed(r.status)).length;
@@ -434,16 +465,39 @@ export default function AcompanhamentoClient({
             type="text"
             placeholder="Pesquisar por número, cliente, categoria, técnico..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setSearchQuery(e.target.value))}
             className={styles.searchInput}
           />
+        </div>
+        <div className={styles.selectFilterGroup}>
+          <select
+            className={styles.filterSelect}
+            value={filterClient}
+            onChange={(e) => handleFilterChange(() => setFilterClient(e.target.value))}
+          >
+            <option value="">👤 Todos os Clientes</option>
+            {uniqueClients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <select
+            className={styles.filterSelect}
+            value={filterTechnician}
+            onChange={(e) => handleFilterChange(() => setFilterTechnician(e.target.value))}
+          >
+            <option value="">🔧 Todos os Técnicos</option>
+            <option value="__none__">Não atribuído</option>
+            {uniqueTechnicians.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
         </div>
         <div className={styles.statusFilterGroup}>
           {(['todos', 'abertos', 'fechados'] as const).map((f) => (
             <button
               key={f}
               className={`${styles.filterBtn} ${filterStatus === f ? styles.filterBtnActive : ''}`}
-              onClick={() => setFilterStatus(f)}
+              onClick={() => handleFilterChange(() => setFilterStatus(f))}
             >
               {f === 'todos' ? '📋 Todos' : f === 'abertos' ? '🟡 Abertos' : '✅ Fechados'}
             </button>
@@ -458,120 +512,162 @@ export default function AcompanhamentoClient({
           <p>Tente ajustar os filtros ou termos da pesquisa.</p>
         </div>
       ) : (
-        <div className={`${styles.tableContainer} glass`}>
-          <table className={styles.dataTable}>
-            <thead>
-              <tr>
-                <th>Chamado</th>
-                <th>Solicitante</th>
-                <th>Cliente</th>
-                <th>Tipo / Nível</th>
-                <th>Categoria</th>
-                <th>Data Abertura</th>
-                <th>Prazo Final (SLA)</th>
-                <th>Data Agendada</th>
-                <th>Técnico</th>
-                <th>Status</th>
-                {isAdmin && <th>Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.map((req) => {
-                const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
-                const prazoFinal = req.prazoSla;
-                return (
-                  <tr key={req.id} className={styles.rowHover}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
-                        #{String(req.id).padStart(3, '0')}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 3, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.description}>
-                        {req.description}
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 600, color: '#334155', fontSize: '0.875rem' }}>
-                      {req.openedBy || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>}
-                    </td>
-                    <td>
-                      <span className={styles.clientText}>{req.client.name}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
-                        {req.tipoChamado}
-                      </span>
-                      {nivel && (
-                        <div style={{ marginTop: 4 }}>
-                          <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
-                            {nivel.label}
-                          </span>
-                        </div>
-                      )}
-                      {!nivel && (
-                        <div style={{ marginTop: 4 }}>
-                          <span className={styles.nivelBadgeEmpty}>Sem nível</span>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span className={styles.categoryLabel}>{req.categoria}</span>
-                      {req.subItem && <span className={styles.subItemLabel}>{req.subItem}</span>}
-                    </td>
-                    <td>
-                      <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
-                    </td>
-                    <td>
-                      <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
-                        {formatDateTime(prazoFinal)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
-                        {formatDateTime(req.dataAtendimento)}
-                      </span>
-                    </td>
-                    <td>
-                      {req.technician ? (
-                        <span className={styles.technicianName}>{req.technician.name}</span>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Não atribuído</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
-                        {getStatusLabel(req.status)}
-                      </span>
-                    </td>
-                    {isAdmin && (
+        <>
+          <div className={`${styles.tableContainer} glass`}>
+            <table className={styles.dataTable}>
+              <thead>
+                <tr>
+                  <th>Chamado</th>
+                  <th>Solicitante</th>
+                  <th>Cliente</th>
+                  <th>Tipo / Nível</th>
+                  <th>Categoria</th>
+                  <th>Data Abertura</th>
+                  <th>Prazo Final (SLA)</th>
+                  <th>Data Agendada</th>
+                  <th>Técnico</th>
+                  <th>Status</th>
+                  {isAdmin && <th>Ações</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRequests.map((req) => {
+                  const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
+                  const prazoFinal = req.prazoSla;
+                  return (
+                    <tr key={req.id} className={styles.rowHover}>
                       <td>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            className={styles.btnEdit}
-                            onClick={() => handleEditClick(req)}
-                            disabled={isClosed(req.status)}
-                            title={isClosed(req.status) ? "Chamados concluídos ou cancelados não podem ser agendados/reagendados" : undefined}
-                          >
-                            {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
-                          </button>
-                          <button
-                            className={styles.btnHistory}
-                            onClick={() => setHistoryRequest(req)}
-                            disabled={!req.schedulings || req.schedulings.length === 0}
-                            title={(!req.schedulings || req.schedulings.length === 0)
-                              ? "Não há histórico de agendamentos para este chamado"
-                              : "Visualizar histórico de reagendamentos"
-                            }
-                          >
-                            ⏳ Histórico ({req.schedulings?.length || 0})
-                          </button>
+                        <div style={{ fontWeight: 700, color: 'var(--primary-color)' }}>
+                          #{String(req.id).padStart(3, '0')}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 3, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={req.description}>
+                          {req.description}
                         </div>
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      <td style={{ fontWeight: 600, color: '#334155', fontSize: '0.875rem' }}>
+                        {req.openedBy || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>}
+                      </td>
+                      <td>
+                        <span className={styles.clientText}>{req.client.name}</span>
+                      </td>
+                      <td>
+                        <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
+                          {req.tipoChamado}
+                        </span>
+                        {nivel && (
+                          <div style={{ marginTop: 4 }}>
+                            <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
+                              {nivel.label}
+                            </span>
+                          </div>
+                        )}
+                        {!nivel && (
+                          <div style={{ marginTop: 4 }}>
+                            <span className={styles.nivelBadgeEmpty}>Sem nível</span>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span className={styles.categoryLabel}>{req.categoria}</span>
+                        {req.subItem && <span className={styles.subItemLabel}>{req.subItem}</span>}
+                      </td>
+                      <td>
+                        <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
+                      </td>
+                      <td>
+                        <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
+                          {formatDateTime(prazoFinal)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
+                          {formatDateTime(req.dataAtendimento)}
+                        </span>
+                      </td>
+                      <td>
+                        {req.technician ? (
+                          <span className={styles.technicianName}>{req.technician.name}</span>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Não atribuído</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
+                          {getStatusLabel(req.status)}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              className={styles.btnEdit}
+                              onClick={() => handleEditClick(req)}
+                              disabled={isClosed(req.status)}
+                              title={isClosed(req.status) ? "Chamados concluídos ou cancelados não podem ser agendados/reagendados" : undefined}
+                            >
+                              {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
+                            </button>
+                            <button
+                              className={styles.btnHistory}
+                              onClick={() => setHistoryRequest(req)}
+                              disabled={!req.schedulings || req.schedulings.length === 0}
+                              title={(!req.schedulings || req.schedulings.length === 0)
+                                ? "Não há histórico de agendamentos para este chamado"
+                                : "Visualizar histórico de reagendamentos"
+                              }
+                            >
+                              ⏳ Histórico ({req.schedulings?.length || 0})
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className={styles.paginationRow}>
+              <span className={styles.paginationInfo}>
+                Exibindo {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filteredRequests.length)} de {filteredRequests.length} chamados
+              </span>
+              <div className={styles.paginationControls}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safePage === 1}
+                  title="Primeira página"
+                >«</button>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                >‹ Anterior</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    className={`${styles.pageBtn} ${p === safePage ? styles.pageBtnActive : ''}`}
+                    onClick={() => setCurrentPage(p)}
+                  >{p}</button>
+                ))}
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                >Próximo ›</button>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safePage === totalPages}
+                  title="Última página"
+                >»</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Janela Modal de Histórico de Reagendamentos */}

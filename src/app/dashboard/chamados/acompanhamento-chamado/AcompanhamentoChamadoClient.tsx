@@ -87,6 +87,10 @@ export default function AcompanhamentoChamadoClient({
   const [requests, setRequests] = useState<SerializedRequest[]>(initialRequests);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'todos' | 'abertos' | 'fechados'>('todos');
+  const [filterClient, setFilterClient] = useState('');
+  const [filterTechnician, setFilterTechnician] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 4;
   const [view, setView] = useState<'list' | 'finalize'>('list');
   const [selectedRequest, setSelectedRequest] = useState<SerializedRequest | null>(null);
 
@@ -145,8 +149,35 @@ export default function AcompanhamentoChamadoClient({
       filterStatus === 'abertos' ? !isClosed :
       isClosed;
 
-    return matchQuery && matchStatus;
+    const matchClient = filterClient === '' || r.client.id === filterClient;
+    const matchTechnician = filterTechnician === '' ||
+      (filterTechnician === '__none__' ? !r.technician : r.technician?.id === filterTechnician);
+
+    return matchQuery && matchStatus && matchClient && matchTechnician;
   });
+
+  // Listas únicas para os filtros
+  const uniqueClients = Array.from(
+    new Map(requests.map((r) => [r.client.id, r.client.name])).entries()
+  ).map(([id, name]) => ({ id, name }));
+
+  const uniqueTechnicians = Array.from(
+    new Map(
+      requests
+        .filter((r) => r.technician)
+        .map((r) => [r.technician!.id, r.technician!.name])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }));
+
+  // Paginação
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRequests = filteredRequests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleFilterChange = (fn: () => void) => {
+    fn();
+    setCurrentPage(1);
+  };
 
   // Contadores
   const totalAbertos = requests.filter((r) => r.status !== 'CONCLUIDO' && r.status !== 'CANCELADO').length;
@@ -344,16 +375,39 @@ export default function AcompanhamentoChamadoClient({
             type="text"
             placeholder="Pesquisar por número, cliente, técnico, status..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setSearchQuery(e.target.value))}
             className={styles.searchInput}
           />
+        </div>
+        <div className={styles.selectFilterGroup}>
+          <select
+            className={styles.filterSelect}
+            value={filterClient}
+            onChange={(e) => handleFilterChange(() => setFilterClient(e.target.value))}
+          >
+            <option value="">👤 Todos os Clientes</option>
+            {uniqueClients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <select
+            className={styles.filterSelect}
+            value={filterTechnician}
+            onChange={(e) => handleFilterChange(() => setFilterTechnician(e.target.value))}
+          >
+            <option value="">🔧 Todos os Técnicos</option>
+            <option value="__none__">Não atribuído</option>
+            {uniqueTechnicians.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
         </div>
         <div className={styles.statusFilterGroup}>
           {(['todos', 'abertos', 'fechados'] as const).map((f) => (
             <button
               key={f}
               className={`${styles.filterBtn} ${filterStatus === f ? styles.filterBtnActive : ''}`}
-              onClick={() => setFilterStatus(f)}
+              onClick={() => handleFilterChange(() => setFilterStatus(f))}
             >
               {f === 'todos' ? '📋 Todos' : f === 'abertos' ? '🟡 Abertos' : '✅ Fechados'}
             </button>
@@ -368,134 +422,154 @@ export default function AcompanhamentoChamadoClient({
           <p>Tente ajustar os filtros ou termos da pesquisa.</p>
         </div>
       ) : (
-        <div className={`${styles.tableContainer} glass`}>
-          <table className={styles.dataTable}>
-            <thead>
-              <tr>
-                <th>Chamado</th>
-                <th>Solicitante</th>
-                <th>Cliente</th>
-                <th>Tipo / Nível</th>
-                <th>Categoria</th>
-                <th>Data Abertura</th>
-                <th>Prazo Final (SLA)</th>
-                <th>Data Agendada</th>
-                <th>Técnico</th>
-                <th>Status</th>
-                {canFinalize && <th>Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.map((req) => {
-                const ticketSt = getTicketStatus(req);
-                const serviceSt = getAtendimentoStatus(req);
-                const isScheduled = ticketSt.label === 'Agendado';
-                const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
-                const prazoFinal = req.prazoSla;
+        <>
+          <div className={`${styles.tableContainer} glass`}>
+            <table className={styles.dataTable}>
+              <thead>
+                <tr>
+                  <th>Chamado</th>
+                  <th>Solicitante</th>
+                  <th>Cliente</th>
+                  <th>Tipo / Nível</th>
+                  <th>Categoria</th>
+                  <th>Data Abertura</th>
+                  <th>Prazo Final (SLA)</th>
+                  <th>Data Agendada</th>
+                  <th>Técnico</th>
+                  <th>Status</th>
+                  {canFinalize && <th>Ações</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRequests.map((req) => {
+                  const ticketSt = getTicketStatus(req);
+                  const serviceSt = getAtendimentoStatus(req);
+                  const isScheduled = ticketSt.label === 'Agendado';
+                  const nivel = req.nivelCriticidade ? NIVEL_LABELS[req.nivelCriticidade] : null;
+                  const prazoFinal = req.prazoSla;
 
-                return (
-                  <tr key={req.id} className={styles.rowHover}>
-                    <td>
-                      <div className={styles.idBox}>
-                        #{String(req.id).padStart(3, '0')}
-                      </div>
-                      <div className={styles.descTooltip} title={req.description}>
-                        {req.description}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#334155', fontSize: '0.875rem' }}>
-                        {req.openedBy || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={styles.clientText}>{req.client.name}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
-                        {req.tipoChamado}
-                      </span>
-                      {nivel && (
-                        <div style={{ marginTop: 4 }}>
-                          <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
-                            {nivel.label}
-                          </span>
-                        </div>
-                      )}
-                      {!nivel && (
-                        <div style={{ marginTop: 4 }}>
-                          <span className={styles.nivelBadgeEmpty}>Sem nível</span>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span className={styles.categoryLabel}>{req.categoria}</span>
-                      {req.subItem && <span className={styles.subItemLabel}>{req.subItem}</span>}
-                    </td>
-                    <td>
-                      <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
-                    </td>
-                    <td>
-                      <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
-                        {formatDateTime(prazoFinal)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
-                        {formatDateTime(req.dataAtendimento)}
-                      </span>
-                    </td>
-                    <td>
-                      {req.technician ? (
-                        <span className={styles.technicianName}>{req.technician.name}</span>
-                      ) : (
-                        <span className={styles.unassigned}>Não atribuído</span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                        <span className={`${styles.statusLabel} ${ticketSt.class}`}>
-                          {ticketSt.label}
-                        </span>
-                        <span className={`${styles.statusLabel} ${serviceSt.class}`}>
-                          {serviceSt.label}
-                        </span>
-                      </div>
-                    </td>
-                    {canFinalize && (
+                  return (
+                    <tr key={req.id} className={styles.rowHover}>
                       <td>
-                        {isScheduled ? (
-                          <button
-                            className={styles.btnFinalize}
-                            onClick={() => handleFinalizeClick(req)}
-                          >
-                            🏁 Finalizar
-                          </button>
-                        ) : req.status === 'CONCLUIDO' ? (
-                          <div className={styles.closedInfoBox}>
-                            <span className={styles.closedBy} title={`Finalizado por: ${req.finishedBy || '—'}`}>
-                              Concluído
+                        <div className={styles.idBox}>
+                          #{String(req.id).padStart(3, '0')}
+                        </div>
+                        <div className={styles.descTooltip} title={req.description}>
+                          {req.description}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#334155', fontSize: '0.875rem' }}>
+                          {req.openedBy || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={styles.clientText}>{req.client.name}</span>
+                      </td>
+                      <td>
+                        <span className={`${styles.badge} ${req.tipoChamado === 'Emergenciais' ? styles.typeBadgeEmergencial : styles.typeBadge}`}>
+                          {req.tipoChamado}
+                        </span>
+                        {nivel && (
+                          <div style={{ marginTop: 4 }}>
+                            <span className={styles.nivelBadge} style={{ color: nivel.color, backgroundColor: nivel.bg }}>
+                              {nivel.label}
                             </span>
-                            <div className={styles.closedDate}>
-                              {formatDateTime(req.finishedAt)}
-                            </div>
-                            {req.finalObservacao && (
-                              <div className={styles.closedNotes} title={req.finalObservacao}>
-                                📝 Laudo técnico
-                              </div>
-                            )}
                           </div>
-                        ) : (
-                          <span className={styles.actionBlock}>—</span>
+                        )}
+                        {!nivel && (
+                          <div style={{ marginTop: 4 }}>
+                            <span className={styles.nivelBadgeEmpty}>Sem nível</span>
+                          </div>
                         )}
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      <td>
+                        <span className={styles.categoryLabel}>{req.categoria}</span>
+                        {req.subItem && <span className={styles.subItemLabel}>{req.subItem}</span>}
+                      </td>
+                      <td>
+                        <span className={styles.dateText}>{formatDateTime(req.createdAt)}</span>
+                      </td>
+                      <td>
+                        <span className={styles.dateText} style={{ fontWeight: 600, color: '#dc2626' }}>
+                          {formatDateTime(prazoFinal)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={styles.dateText} style={req.dataAtendimento ? { fontWeight: 600, color: 'var(--primary-color)' } : {}}>
+                          {formatDateTime(req.dataAtendimento)}
+                        </span>
+                      </td>
+                      <td>
+                        {req.technician ? (
+                          <span className={styles.technicianName}>{req.technician.name}</span>
+                        ) : (
+                          <span className={styles.unassigned}>Não atribuído</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                          <span className={`${styles.statusLabel} ${ticketSt.class}`}>
+                            {ticketSt.label}
+                          </span>
+                          <span className={`${styles.statusLabel} ${serviceSt.class}`}>
+                            {serviceSt.label}
+                          </span>
+                        </div>
+                      </td>
+                      {canFinalize && (
+                        <td>
+                          {isScheduled ? (
+                            <button
+                              className={styles.btnFinalize}
+                              onClick={() => handleFinalizeClick(req)}
+                            >
+                              🏁 Finalizar
+                            </button>
+                          ) : req.status === 'CONCLUIDO' ? (
+                            <div className={styles.closedInfoBox}>
+                              <span className={styles.closedBy} title={`Finalizado por: ${req.finishedBy || '—'}`}>
+                                Concluído
+                              </span>
+                              <div className={styles.closedDate}>
+                                {formatDateTime(req.finishedAt)}
+                              </div>
+                              {req.finalObservacao && (
+                                <div className={styles.closedNotes} title={req.finalObservacao}>
+                                  📝 Laudo técnico
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className={styles.actionBlock}>—</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className={styles.paginationRow}>
+              <span className={styles.paginationInfo}>
+                Exibindo {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filteredRequests.length)} de {filteredRequests.length} chamados
+              </span>
+              <div className={styles.paginationControls}>
+                <button className={styles.pageBtn} onClick={() => setCurrentPage(1)} disabled={safePage === 1} title="Primeira página">«</button>
+                <button className={styles.pageBtn} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>‹ Anterior</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button key={p} className={`${styles.pageBtn} ${p === safePage ? styles.pageBtnActive : ''}`} onClick={() => setCurrentPage(p)}>{p}</button>
+                ))}
+                <button className={styles.pageBtn} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>Próximo ›</button>
+                <button className={styles.pageBtn} onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages} title="Última página">»</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
