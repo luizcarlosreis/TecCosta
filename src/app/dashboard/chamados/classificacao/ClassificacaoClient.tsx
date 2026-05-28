@@ -41,6 +41,12 @@ const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }>
   '4': { label: 'N4 – Agendado',    color: '#7c3aed', bg: '#ede9fe' },
 };
 
+const TIME_OPTIONS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00'
+];
+
 function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   const date = new Date(startDate);
 
@@ -510,10 +516,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                       style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
                       title="Selecionar data do SLA"
                     />
-                    <input
-                      type="time"
-                      min="08:00"
-                      max="18:00"
+                    <select
                       required
                       value={prazoSlaManual ? prazoSlaManual.split('T')[1] || '' : ''}
                       onChange={(e) => {
@@ -522,9 +525,16 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
                         setPrazoSlaManual(`${currentDate}T${newTime}`);
                       }}
                       disabled={loading}
-                      style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}
                       title="Selecionar hora comercial do SLA (08:00 às 18:00)"
-                    />
+                    >
+                      <option value="">-- Hora --</option>
+                      {TIME_OPTIONS.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )}

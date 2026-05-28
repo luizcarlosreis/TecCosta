@@ -57,6 +57,12 @@ const STATUS_OPTIONS = [
   { value: 'CANCELADO',    label: 'Fechado – Cancelado' },
 ];
 
+const TIME_OPTIONS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00'
+];
+
 function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return '—';
   const date = new Date(dateStr);
@@ -480,10 +486,7 @@ export default function AcompanhamentoClient({
                     style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
                     title="Selecionar data do agendamento"
                   />
-                  <input
-                    type="time"
-                    min="08:00"
-                    max="18:00"
+                  <select
                     value={formDataAtendimento ? formDataAtendimento.split('T')[1] || '' : ''}
                     onChange={(e) => {
                       const newTime = e.target.value;
@@ -492,9 +495,16 @@ export default function AcompanhamentoClient({
                     }}
                     disabled={loading}
                     required={formStatus !== 'CANCELADO'}
-                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}
                     title="Selecionar hora comercial do agendamento (08:00 às 18:00)"
-                  />
+                  >
+                    <option value="">-- Hora --</option>
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
