@@ -167,7 +167,7 @@ function calcularDataAtendimento(nivelCriticidade: string): Date {
   const nivel = NIVEIS[nivelCriticidade as keyof typeof NIVEIS];
   const now = new Date();
   if (nivel.horas !== null) {
-    return new Date(now.getTime() + nivel.horas * 60 * 60 * 1000);
+    return calculateBusinessSla(now, nivel.horas);
   }
   return now;
 }
