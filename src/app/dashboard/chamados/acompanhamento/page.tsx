@@ -32,7 +32,7 @@ export default async function AcompanhamentoPage() {
         clientId: { in: clientIds },
         nivelCriticidade: { not: null }
       },
-      include: { client: true, technician: true },
+      include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
       orderBy: { createdAt: 'desc' }
     });
   } else {
@@ -40,7 +40,7 @@ export default async function AcompanhamentoPage() {
       where: {
         nivelCriticidade: { not: null }
       },
-      include: { client: true, technician: true },
+      include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
       orderBy: { createdAt: 'desc' }
     });
   }
