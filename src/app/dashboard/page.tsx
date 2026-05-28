@@ -1,22 +1,136 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+interface RecentRequest {
+  id: string;
+  title: string;
+  client: string;
+  status: string;
+  statusLabel: string;
+}
+
 export default function DashboardPage() {
-  const stats = [
-    { label: 'Solicitações Abertas', value: '12', color: 'var(--secondary-color)' },
-    { label: 'Em Andamento', value: '5', color: 'var(--primary-color)' },
-    { label: 'Finalizadas (Mês)', value: '48', color: 'var(--success-color)' },
-    { label: 'Clientes Ativos', value: '156', color: 'var(--primary-color)' },
-  ];
+  const [sessionUser, setSessionUser] = useState<{ id: string; name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setSessionUser(data.user);
+      })
+      .catch(() => {});
+  }, []);
+
+  const getGreeting = () => {
+    if (!sessionUser) return 'Olá, ...';
+    return `Olá, ${sessionUser.name}`;
+  };
+
+  const getSubtitle = () => {
+    if (!sessionUser) return 'Carregando portal...';
+    switch (sessionUser.role) {
+      case 'ADMINISTRADOR':
+        return 'Aqui está um resumo de todas as atividades do portal administrativo.';
+      case 'TECCOSTA_GESTAO':
+        return 'Gerencie clientes, técnicos e acompanhe o fluxo de chamados da TecCosta.';
+      case 'CONDOMINIO_EMPRESA':
+      case 'ADMINISTRADORA_CONDOMINIO':
+        return 'Acompanhe suas solicitações abertas e crie novos chamados para seus condomínios.';
+      case 'TECNICO':
+        return 'Acesse seus chamados de manutenção e gerencie seus agendamentos.';
+      default:
+        return 'Bem-vindo ao portal da TecCosta.';
+    }
+  };
+
+  // Stats dynamically configured depending on the user's role
+  const getStats = () => {
+    if (!sessionUser) return [];
+    const role = sessionUser.role;
+    if (role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO') {
+      return [
+        { label: 'Chamados em Aberto', value: '8', color: 'var(--secondary-color)' },
+        { label: 'Em Andamento', value: '4', color: 'var(--primary-color)' },
+        { label: 'Concluídos este Mês', value: '32', color: 'var(--success-color)' },
+        { label: 'Clientes Ativos', value: '18', color: 'var(--primary-color)' },
+      ];
+    } else if (role === 'TECNICO') {
+      return [
+        { label: 'Chamados Atribuídos', value: '3', color: 'var(--secondary-color)' },
+        { label: 'Em Andamento', value: '2', color: 'var(--primary-color)' },
+        { label: 'Seus Concluídos (Mês)', value: '15', color: 'var(--success-color)' },
+      ];
+    } else {
+      // Clients
+      return [
+        { label: 'Seus Chamados Abertos', value: '3', color: 'var(--secondary-color)' },
+        { label: 'Em Andamento', value: '1', color: 'var(--primary-color)' },
+        { label: 'Concluídos recentemente', value: '12', color: 'var(--success-color)' },
+      ];
+    }
+  };
+
+  const getRecentRequests = (): RecentRequest[] => {
+    if (!sessionUser) return [];
+    const role = sessionUser.role;
+    if (role === 'TECNICO') {
+      return [
+        { id: '#0052', title: 'Manutenção Preventiva de Motores', client: 'Condomínio Spazio', status: 'progress', statusLabel: 'Em Andamento' },
+        { id: '#0054', title: 'Ajuste de Câmera de Entrada', client: 'Residencial Plaza', status: 'pending', statusLabel: 'Pendente' },
+      ];
+    } else if (role === 'CONDOMINIO_EMPRESA' || role === 'ADMINISTRADORA_CONDOMINIO') {
+      return [
+        { id: '#0056', title: 'Verificação de Curto-Circuito', client: 'Condomínio Vista Alegre', status: 'pending', statusLabel: 'Pendente' },
+        { id: '#0058', title: 'Substituição de Lâmpadas LED', client: 'Condomínio Vista Alegre', status: 'progress', statusLabel: 'Em Andamento' },
+      ];
+    } else {
+      return [
+        { id: '#0051', title: 'Reparo em Portão Automático', client: 'Residencial Aurora', status: 'pending', statusLabel: 'Pendente' },
+        { id: '#0053', title: 'Instalação de Câmeras IP', client: 'Edifício Horizonte', status: 'progress', statusLabel: 'Em Andamento' },
+        { id: '#0055', title: 'Troca de Sensores de Presença', client: 'Condomínio Solar', status: 'pending', statusLabel: 'Pendente' },
+      ];
+    }
+  };
+
+  const renderQuickActions = () => {
+    if (!sessionUser) return null;
+    const role = sessionUser.role;
+    if (role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO') {
+      return (
+        <div className="actions-grid">
+          <Link href="/dashboard/clientes" className="action-btn text-center">Novo Cliente</Link>
+          <Link href="/dashboard/usuarios" className="action-btn text-center">Cadastrar Técnico</Link>
+          <Link href="/dashboard/chamados/solicitacao" className="action-btn text-center">Nova Solicitação</Link>
+          <Link href="/dashboard/chamados/classificacao" className="action-btn text-center">Classificar Chamados</Link>
+        </div>
+      );
+    } else if (role === 'TECNICO') {
+      return (
+        <div className="actions-grid">
+          <Link href="/dashboard/chamados/acompanhamento-chamado" className="action-btn text-center">Ver Meus Chamados</Link>
+        </div>
+      );
+    } else {
+      return (
+        <div className="actions-grid">
+          <Link href="/dashboard/chamados/solicitacao" className="action-btn text-center">Nova Solicitação</Link>
+          <Link href="/dashboard/chamados/solicitacao" className="action-btn text-center">Minhas Solicitações</Link>
+        </div>
+      );
+    }
+  };
 
   return (
     <div className="animate-fade-in">
       <div className="welcome-section">
-        <h1>Olá, Administrador</h1>
-        <p>Aqui está um resumo do que está acontecendo no portal hoje.</p>
+        <h1>{getGreeting()}</h1>
+        <p>{getSubtitle()}</p>
       </div>
 
       <div className="stats-grid">
-        {stats.map((stat, idx) => (
+        {getStats().map((stat, idx) => (
           <div key={idx} className="stat-card glass">
             <p className="stat-label">{stat.label}</p>
             <p className="stat-value" style={{ color: stat.color }}>{stat.value}</p>
@@ -27,32 +141,36 @@ export default function DashboardPage() {
       <div className="dashboard-sections">
         <section className="recent-requests glass">
           <div className="section-header">
-            <h2>Solicitações Recentes</h2>
-            <button className="view-all">Ver todas</button>
+            <h2>{sessionUser?.role === 'TECNICO' ? 'Seus Chamados Recentes' : 'Solicitações Recentes'}</h2>
+            {sessionUser?.role === 'TECNICO' ? (
+              <Link href="/dashboard/chamados/acompanhamento-chamado" className="view-all">Ver todos</Link>
+            ) : (
+              <Link href="/dashboard/chamados/solicitacao" className="view-all">Ver todas</Link>
+            )}
           </div>
           
           <div className="request-list">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="request-item">
-                <div className="request-id">#00{i + 50}</div>
+            {getRecentRequests().map((request) => (
+              <div key={request.id} className="request-item">
+                <div className="request-id">{request.id}</div>
                 <div className="request-info">
-                  <p className="request-title">Reparo em Câmera de Segurança</p>
-                  <p className="request-client">Condomínio Mar Azul</p>
+                  <p className="request-title">{request.title}</p>
+                  <p className="request-client">{request.client}</p>
                 </div>
-                <div className="request-status status-pending">Pendente</div>
+                <div className={`request-status status-${request.status}`}>
+                  {request.statusLabel}
+                </div>
               </div>
             ))}
+            {getRecentRequests().length === 0 && (
+              <p className="text-muted text-center py-4">Nenhuma solicitação recente encontrada.</p>
+            )}
           </div>
         </section>
 
         <section className="quick-actions glass">
           <h2>Ações Rápidas</h2>
-          <div className="actions-grid">
-            <button className="action-btn">Novo Cliente</button>
-            <button className="action-btn">Cadastrar Técnico</button>
-            <button className="action-btn">Nova Solicitação</button>
-            <button className="action-btn">Gerar Relatório</button>
-          </div>
+          {renderQuickActions()}
         </section>
       </div>
 
@@ -109,6 +227,12 @@ export default function DashboardPage() {
           gap: 30px;
         }
 
+        @media (max-width: 992px) {
+          .dashboard-sections {
+            grid-template-columns: 1fr;
+          }
+        }
+
         .section-header {
           display: flex;
           justify-content: space-between;
@@ -126,6 +250,7 @@ export default function DashboardPage() {
           color: var(--secondary-color);
           font-weight: 600;
           font-size: 0.875rem;
+          text-decoration: none;
         }
 
         .recent-requests, .quick-actions {
@@ -186,6 +311,11 @@ export default function DashboardPage() {
           color: #92400e;
         }
 
+        .status-progress {
+          background: #eff6ff;
+          color: #1e40af;
+        }
+
         .actions-grid {
           display: grid;
           grid-template-columns: 1fr;
@@ -200,11 +330,16 @@ export default function DashboardPage() {
           border-radius: 8px;
           font-weight: 600;
           transition: all 0.2s;
+          text-decoration: none;
         }
 
         .action-btn:hover {
           background: var(--secondary-color);
           transform: translateX(5px);
+        }
+
+        .text-center {
+          text-align: center;
         }
       `}</style>
     </div>

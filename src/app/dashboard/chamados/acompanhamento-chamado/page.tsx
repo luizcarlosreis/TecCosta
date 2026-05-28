@@ -19,20 +19,28 @@ export default async function AcompanhamentoChamadoPage() {
     redirect('/');
   }
 
-  // Buscar todos os chamados sem filtros de classificação
+  // Apenas ADMINISTRADOR, TECCOSTA_GESTAO e TECNICO têm acesso
+  if (
+    sessionUser.role !== 'ADMINISTRADOR' &&
+    sessionUser.role !== 'TECCOSTA_GESTAO' &&
+    sessionUser.role !== 'TECNICO'
+  ) {
+    redirect('/dashboard');
+  }
+
+  // Buscar chamados conforme o perfil
   let requests;
-  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
-    const managedClients = await prisma.client.findMany({
-      where: { managers: { some: { id: sessionUser.id } } },
-      select: { id: true }
-    });
-    const clientIds = managedClients.map((c) => c.id);
+  if (sessionUser.role === 'TECNICO') {
+    // Técnico vê apenas chamados destinados a ele
     requests = await prisma.maintenanceRequest.findMany({
-      where: { clientId: { in: clientIds } },
+      where: {
+        technicianId: sessionUser.id
+      },
       include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });
   } else {
+    // Admins e Gestão veem tudo
     requests = await prisma.maintenanceRequest.findMany({
       include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }

@@ -71,6 +71,7 @@ export default function DashboardLayout({
         </div>
         
         <nav className="sidebar-nav">
+          {/* Início — visível para todos */}
           <Link 
             href="/dashboard"
             className={`nav-item ${pathname === '/dashboard' ? 'active' : ''}`}
@@ -79,68 +80,93 @@ export default function DashboardLayout({
             <span className="label">Início</span>
           </Link>
           
-          <Link 
-            href="/dashboard/clientes"
-            className={`nav-item ${pathname === '/dashboard/clientes' ? 'active' : ''}`}
-          >
-            <span className="icon">👥</span>
-            <span className="label">Clientes</span>
-          </Link>
-
-          <Link 
-            href="/dashboard/usuarios"
-            className={`nav-item ${pathname === '/dashboard/usuarios' ? 'active' : ''}`}
-          >
-            <span className="icon">👤</span>
-            <span className="label">Usuários</span>
-          </Link>
-
-          {/* Grupo de Chamados */}
-          <div className="nav-group">
-            <button 
-              onClick={() => setIsChamadosOpen(!isChamadosOpen)}
-              className={`group-header-btn ${pathname.startsWith('/dashboard/chamados') ? 'group-active' : ''}`}
+          {/* Clientes — apenas ADMINISTRADOR e TECCOSTA_GESTAO */}
+          {sessionUser && (sessionUser.role === 'ADMINISTRADOR' || sessionUser.role === 'TECCOSTA_GESTAO') && (
+            <Link 
+              href="/dashboard/clientes"
+              className={`nav-item ${pathname === '/dashboard/clientes' ? 'active' : ''}`}
             >
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span className="icon">📋</span>
-                <span className="label">Chamados</span>
-              </div>
-              <span className={`arrow ${isChamadosOpen ? 'arrow-open' : ''}`}>▼</span>
-            </button>
+              <span className="icon">👥</span>
+              <span className="label">Clientes</span>
+            </Link>
+          )}
 
-            {isChamadosOpen && (
-              <div className="nav-submenu">
-                <Link 
-                  href="/dashboard/chamados/solicitacao"
-                  className={`submenu-item ${pathname === '/dashboard/chamados/solicitacao' ? 'active' : ''}`}
+          {/* Usuários — apenas ADMINISTRADOR e TECCOSTA_GESTAO */}
+          {sessionUser && (sessionUser.role === 'ADMINISTRADOR' || sessionUser.role === 'TECCOSTA_GESTAO') && (
+            <Link 
+              href="/dashboard/usuarios"
+              className={`nav-item ${pathname === '/dashboard/usuarios' ? 'active' : ''}`}
+            >
+              <span className="icon">👤</span>
+              <span className="label">Usuários</span>
+            </Link>
+          )}
+
+          {/* Grupo de Chamados — visível para todos, mas submenus filtrados por role */}
+          {sessionUser && (() => {
+            const role = sessionUser.role;
+            const canSolicitacao = role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO' || role === 'CONDOMINIO_EMPRESA' || role === 'ADMINISTRADORA_CONDOMINIO';
+            const canClassificacao = role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO';
+            const canAgendamento = role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO';
+            const canAcompanhamento = role === 'ADMINISTRADOR' || role === 'TECCOSTA_GESTAO' || role === 'TECNICO';
+            const hasAnyChamado = canSolicitacao || canClassificacao || canAgendamento || canAcompanhamento;
+            if (!hasAnyChamado) return null;
+            return (
+              <div className="nav-group">
+                <button 
+                  onClick={() => setIsChamadosOpen(!isChamadosOpen)}
+                  className={`group-header-btn ${pathname.startsWith('/dashboard/chamados') ? 'group-active' : ''}`}
                 >
-                  <span className="icon">📝</span>
-                  <span className="label">Solicitação</span>
-                </Link>
-                <Link 
-                  href="/dashboard/chamados/classificacao"
-                  className={`submenu-item ${pathname === '/dashboard/chamados/classificacao' ? 'active' : ''}`}
-                >
-                  <span className="icon">🗂️</span>
-                  <span className="label">Classificação</span>
-                </Link>
-                <Link 
-                  href="/dashboard/chamados/acompanhamento"
-                  className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento' ? 'active' : ''}`}
-                >
-                  <span className="icon">📊</span>
-                  <span className="label">Agendamento</span>
-                </Link>
-                <Link 
-                  href="/dashboard/chamados/acompanhamento-chamado"
-                  className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento-chamado' ? 'active' : ''}`}
-                >
-                  <span className="icon">📈</span>
-                  <span className="label">Acompanhamento</span>
-                </Link>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span className="icon">📋</span>
+                    <span className="label">Chamados</span>
+                  </div>
+                  <span className={`arrow ${isChamadosOpen ? 'arrow-open' : ''}`}>▼</span>
+                </button>
+
+                {isChamadosOpen && (
+                  <div className="nav-submenu">
+                    {canSolicitacao && (
+                      <Link 
+                        href="/dashboard/chamados/solicitacao"
+                        className={`submenu-item ${pathname === '/dashboard/chamados/solicitacao' ? 'active' : ''}`}
+                      >
+                        <span className="icon">📝</span>
+                        <span className="label">Solicitação</span>
+                      </Link>
+                    )}
+                    {canClassificacao && (
+                      <Link 
+                        href="/dashboard/chamados/classificacao"
+                        className={`submenu-item ${pathname === '/dashboard/chamados/classificacao' ? 'active' : ''}`}
+                      >
+                        <span className="icon">🗂️</span>
+                        <span className="label">Classificação</span>
+                      </Link>
+                    )}
+                    {canAgendamento && (
+                      <Link 
+                        href="/dashboard/chamados/acompanhamento"
+                        className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento' ? 'active' : ''}`}
+                      >
+                        <span className="icon">📊</span>
+                        <span className="label">Agendamento</span>
+                      </Link>
+                    )}
+                    {canAcompanhamento && (
+                      <Link 
+                        href="/dashboard/chamados/acompanhamento-chamado"
+                        className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento-chamado' ? 'active' : ''}`}
+                      >
+                        <span className="icon">📈</span>
+                        <span className="label">Acompanhamento</span>
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </nav>
         
         <div className="sidebar-footer">

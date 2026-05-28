@@ -19,31 +19,22 @@ export default async function AcompanhamentoPage() {
     redirect('/');
   }
 
-  // Buscar todos os chamados classificados (filtrado por cliente se for gestor)
-  let requests;
-  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
-    const managedClients = await prisma.client.findMany({
-      where: { managers: { some: { id: sessionUser.id } } },
-      select: { id: true }
-    });
-    const clientIds = managedClients.map((c) => c.id);
-    requests = await prisma.maintenanceRequest.findMany({
-      where: {
-        clientId: { in: clientIds },
-        nivelCriticidade: { not: null }
-      },
-      include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
-      orderBy: { createdAt: 'desc' }
-    });
-  } else {
-    requests = await prisma.maintenanceRequest.findMany({
-      where: {
-        nivelCriticidade: { not: null }
-      },
-      include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
-      orderBy: { createdAt: 'desc' }
-    });
+  // Apenas ADMINISTRADOR e TECCOSTA_GESTAO têm acesso
+  if (
+    sessionUser.role !== 'ADMINISTRADOR' &&
+    sessionUser.role !== 'TECCOSTA_GESTAO'
+  ) {
+    redirect('/dashboard');
   }
+
+  // Buscar todos os chamados classificados (todos os chamados para admins/gestão)
+  const requests = await prisma.maintenanceRequest.findMany({
+    where: {
+      nivelCriticidade: { not: null }
+    },
+    include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
+    orderBy: { createdAt: 'desc' }
+  });
 
   // Buscar técnicos disponíveis para o dropdown
   const technicians = await prisma.user.findMany({

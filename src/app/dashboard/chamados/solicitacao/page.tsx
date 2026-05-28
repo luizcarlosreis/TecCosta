@@ -12,17 +12,26 @@ export default async function SolicitacaoPage() {
     redirect('/');
   }
 
-  let sessionUser;
+  let sessionUser: { id: string; name: string; role: string };
   try {
     sessionUser = JSON.parse(sessionCookie.value) as { id: string; name: string; role: string };
   } catch (e) {
     redirect('/');
   }
 
+  // Técnico não tem acesso a esta página
+  if (sessionUser.role === 'TECNICO') {
+    redirect('/dashboard/chamados/acompanhamento-chamado');
+  }
+
+  const isClientProfile =
+    sessionUser.role === 'CONDOMINIO_EMPRESA' ||
+    sessionUser.role === 'ADMINISTRADORA_CONDOMINIO';
+
   // 1. Carregar chamados/solicitações correspondentes
   let requests: any[] = [];
-  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
-    // Filtrar chamados vinculados ao gestor logado
+  if (isClientProfile) {
+    // Filtrar chamados vinculados ao gestor/administradora logado
     const managedClients = await prisma.client.findMany({
       where: { managers: { some: { id: sessionUser.id } } },
       select: { id: true }
@@ -30,7 +39,10 @@ export default async function SolicitacaoPage() {
     const clientIds = managedClients.map(c => c.id);
 
     requests = await prisma.maintenanceRequest.findMany({
-      where: { clientId: { in: clientIds } },
+      where: { 
+        clientId: { in: clientIds },
+        status: { in: ['PENDENTE', 'EM_ANDAMENTO'] }
+      },
       include: { client: true, technician: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -50,7 +62,7 @@ export default async function SolicitacaoPage() {
 
   // 3. Carregar o condomínio/empresa específico do gestor logado
   let userClients: { id: string; name: string }[] = [];
-  if (sessionUser.role === 'CONDOMINIO_EMPRESA') {
+  if (isClientProfile) {
     userClients = await prisma.client.findMany({
       where: { managers: { some: { id: sessionUser.id } } },
       select: { id: true, name: true }
