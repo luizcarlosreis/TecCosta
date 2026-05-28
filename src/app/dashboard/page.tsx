@@ -71,10 +71,10 @@ export default function DashboardPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'PENDENTE': return 'Pendente';
-      case 'EM_ANDAMENTO': return 'Em Andamento';
-      case 'CONCLUIDO': return 'Concluído';
-      case 'CANCELADO': return 'Cancelado';
+      case 'PENDENTE': return 'Aberto – Pendente';
+      case 'EM_ANDAMENTO': return 'Aberto – Em Andamento';
+      case 'CONCLUIDO': return 'Fechado – Concluído';
+      case 'CANCELADO': return 'Fechado – Cancelado';
       default: return status;
     }
   };
