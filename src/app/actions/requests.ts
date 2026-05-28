@@ -21,39 +21,42 @@ async function getSessionUser() {
 // Helper para calcular o SLA considerando o horário comercial das 08:00 às 18:00.
 // Se ultrapassar 18:00, as horas restantes continuam a contar a partir das 08:00 do próximo dia comercial.
 function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
-  const date = new Date(startDate);
+  // Desloca a data em -3 horas para fazer todos os cálculos em UTC representando o fuso de Brasília (GMT-3)
+  const date = new Date(startDate.getTime() - 3 * 60 * 60 * 1000);
 
-  // Se a hora inicial estiver fora do horário comercial:
+  // Se a hora inicial estiver fora do horário comercial (Brasília):
   // Se for antes das 08:00, ajusta para 08:00 do mesmo dia.
   // Se for a partir das 18:00, ajusta para 08:00 do dia seguinte.
-  if (date.getHours() < 8) {
-    date.setHours(8, 0, 0, 0);
-  } else if (date.getHours() >= 18) {
-    date.setDate(date.getDate() + 1);
-    date.setHours(8, 0, 0, 0);
+  if (date.getUTCHours() < 8) {
+    date.setUTCHours(8, 0, 0, 0);
+  } else if (date.getUTCHours() >= 18) {
+    date.setUTCDate(date.getUTCDate() + 1);
+    date.setUTCHours(8, 0, 0, 0);
   }
 
   let remainingHours = hoursToAdd;
   while (remainingHours > 0) {
-    const currentHour = date.getHours();
+    const currentHour = date.getUTCHours();
     const availableHoursToday = 18 - currentHour;
 
     if (availableHoursToday <= 0) {
-      date.setDate(date.getDate() + 1);
-      date.setHours(8, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() + 1);
+      date.setUTCHours(8, 0, 0, 0);
       continue;
     }
 
     if (remainingHours <= availableHoursToday) {
-      date.setHours(currentHour + remainingHours);
+      date.setUTCHours(currentHour + remainingHours);
       remainingHours = 0;
     } else {
       remainingHours -= availableHoursToday;
-      date.setDate(date.getDate() + 1);
-      date.setHours(8, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() + 1);
+      date.setUTCHours(8, 0, 0, 0);
     }
   }
-  return date;
+
+  // Desloca de volta em +3 horas para retornar a data correta em UTC
+  return new Date(date.getTime() + 3 * 60 * 60 * 1000);
 }
 
 // Helper para interpretar strings datetime-local do cliente no fuso horário de Brasília (GMT-3)
