@@ -114,6 +114,7 @@ export default function AcompanhamentoClient({
   const [filterStatus, setFilterStatus] = useState<'todos' | 'abertos' | 'fechados'>('todos');
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingRequest, setEditingRequest] = useState<SerializedRequest | null>(null);
+  const [historyRequest, setHistoryRequest] = useState<SerializedRequest | null>(null);
 
   // Form state
   const [formStatus, setFormStatus] = useState('');
@@ -541,9 +542,20 @@ export default function AcompanhamentoClient({
                     </td>
                     {isAdmin && (
                       <td>
-                        <button className={styles.btnEdit} onClick={() => handleEditClick(req)}>
-                          {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button className={styles.btnEdit} onClick={() => handleEditClick(req)}>
+                            {req.dataAtendimento ? '🔄 Reagendar' : '📅 Agendar'}
+                          </button>
+                          {req.schedulings && req.schedulings.length > 0 && (
+                            <button
+                              className={styles.btnHistory}
+                              onClick={() => setHistoryRequest(req)}
+                              title="Visualizar histórico de reagendamentos"
+                            >
+                              ⏳ Histórico ({req.schedulings.length})
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -551,6 +563,54 @@ export default function AcompanhamentoClient({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Janela Modal de Histórico de Reagendamentos */}
+      {historyRequest && (
+        <div className={styles.historyModalOverlay} onClick={() => setHistoryRequest(null)}>
+          <div className={styles.historyModalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.historyModalHeader}>
+              <div>
+                <h3>⏳ Histórico de Agendamento – Chamado #{String(historyRequest.id).padStart(3, '0')}</h3>
+                <p>Todos os registros de agendamento e reagendamento salvos.</p>
+              </div>
+              <button className={styles.closeModalBtn} onClick={() => setHistoryRequest(null)} title="Fechar Modal">
+                &times;
+              </button>
+            </div>
+            <div className={styles.historyModalBody}>
+              <div className={styles.historyTableContainer}>
+                <table className={styles.historyTable}>
+                  <thead>
+                    <tr>
+                      <th>Data Agendada</th>
+                      <th>Técnico Atribuído</th>
+                      <th>Alterado por</th>
+                      <th>Data de Registro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyRequest.schedulings?.map((hist) => (
+                      <tr key={hist.id}>
+                        <td style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+                          {formatDateTime(hist.scheduledDate)}
+                        </td>
+                        <td>{hist.technicianName}</td>
+                        <td style={{ color: '#475569' }}>{hist.changedBy}</td>
+                        <td style={{ color: '#64748b' }}>{formatDateTime(hist.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className={styles.historyModalFooter}>
+              <button className={styles.btnHistoryClose} onClick={() => setHistoryRequest(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
