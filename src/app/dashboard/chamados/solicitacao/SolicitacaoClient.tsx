@@ -207,6 +207,7 @@ export default function SolicitacaoClient({
     setClientId(isManager && userClients.length > 0 ? userClients[0].id : '');
     setError(null);
     setSuccess(null);
+    setLoading(false);
     setView('form');
   };
 
@@ -215,6 +216,7 @@ export default function SolicitacaoClient({
     setEditingRequestId(null);
     setError(null);
     setSuccess(null);
+    setLoading(false);
   };
 
   const handleEditClick = (req: SerializedRequest) => {
