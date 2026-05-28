@@ -491,7 +491,7 @@ export default function DashboardLayout({
           border-bottom: 1px solid #e2e8f0;
           background: white;
           position: relative;
-          z-index: 90;
+          z-index: 150;
         }
 
         .header-user {
