@@ -191,6 +191,7 @@ export default function AcompanhamentoChamadoClient({
     setFinalObservacao('');
     setError(null);
     setSuccess(null);
+    setLoading(false);
     setView('finalize');
   };
 

@@ -187,10 +187,11 @@ export default function AcompanhamentoClient({
     if (isClosed(req.status)) return;
     setEditingRequest(req);
     setFormStatus(req.status);
-    setFormDataAtendimento(toInputDateTimeValue(req.dataAtendimento));
+    setFormDataAtendimento(req.dataAtendimento ? req.dataAtendimento.slice(0, 16) : '');
     setFormTechnicianId(req.technician?.id || '');
     setError(null);
     setSuccess(null);
+    setLoading(false);
     setView('form');
   };
 

@@ -235,6 +235,7 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
     setPrazoSlaManual('');
     setError(null);
     setSuccess(null);
+    setLoading(false);
     setView('form');
   };
 
