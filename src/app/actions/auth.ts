@@ -46,7 +46,7 @@ export async function loginAction(formData: FormData) {
     return { error: 'Ocorreu um erro ao tentar realizar o login.' };
   }
 
-  redirect('/dashboard');
+  return { success: true };
 }
 
 export async function logoutAction() {

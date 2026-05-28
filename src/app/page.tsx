@@ -28,6 +28,9 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error);
         setLoading(false);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
       }
     } catch (err) {
       console.error('Client login error:', err);
