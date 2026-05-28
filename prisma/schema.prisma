@@ -95,6 +95,9 @@ model MaintenanceRequest {
   finishedAt        DateTime?     // Data/hora do atendimento real (finalização)
   finishedBy        String?       // Quem finalizou o chamado
   finalObservacao   String?       // Observações de encerramento
+  isIncorporadoContrato Boolean?  // Chamado incorporado ao contrato (Sim/Não)
+  detalhesAtendimento   String?   // Detalhes do atendimento se não incorporado
+  valorServico          Float?    // Valor monetário se não incorporado
   status            RequestStatus @default(PENDENTE)
   clientId          String
   client            Client        @relation(fields: [clientId], references: [id])

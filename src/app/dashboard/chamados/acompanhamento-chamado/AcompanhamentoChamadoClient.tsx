@@ -23,6 +23,9 @@ interface SerializedRequest {
   finishedAt: string | null;
   finishedBy: string | null;
   finalObservacao: string | null;
+  isIncorporadoContrato: boolean | null;
+  detalhesAtendimento: string | null;
+  valorServico: number | null;
   status: string;
   createdAt: string;
   client: SerializedClient;
@@ -140,6 +143,9 @@ export default function AcompanhamentoChamadoClient({
   // Form states
   const [finishedAtInput, setFinishedAtInput] = useState('');
   const [finalObservacao, setFinalObservacao] = useState('');
+  const [isIncorporadoContratoInput, setIsIncorporadoContratoInput] = useState(true);
+  const [detalhesAtendimentoInput, setDetalhesAtendimentoInput] = useState('');
+  const [valorServicoInput, setValorServicoInput] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -241,6 +247,9 @@ export default function AcompanhamentoChamadoClient({
     setSelectedRequest(req);
     setFinishedAtInput(getCurrentDateTimeLocal());
     setFinalObservacao('');
+    setIsIncorporadoContratoInput(true);
+    setDetalhesAtendimentoInput('');
+    setValorServicoInput('');
     setError(null);
     setSuccess(null);
     setLoading(false);
@@ -274,10 +283,21 @@ export default function AcompanhamentoChamadoClient({
       }
     }
 
+    if (!isIncorporadoContratoInput) {
+      if (!detalhesAtendimentoInput.trim()) {
+        setError('Por favor, informe os detalhes do atendimento.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append('finishedAt', finishedAtInput);
       formData.append('finalObservacao', finalObservacao);
+      formData.append('isIncorporadoContrato', isIncorporadoContratoInput ? 'Sim' : 'Não');
+      formData.append('detalhesAtendimento', detalhesAtendimentoInput);
+      formData.append('valorServico', valorServicoInput);
 
       const result = await finalizeRequestAction(selectedRequest.id, formData);
 
@@ -296,7 +316,14 @@ export default function AcompanhamentoChamadoClient({
               status: 'CONCLUIDO',
               finishedAt: new Date(finishedAtInput).toISOString(),
               finishedBy: sessionUser.name,
-              finalObservacao: finalObservacao || null
+              finalObservacao: finalObservacao || null,
+              isIncorporadoContrato: isIncorporadoContratoInput,
+              detalhesAtendimento: !isIncorporadoContratoInput ? detalhesAtendimentoInput : null,
+              valorServico: !isIncorporadoContratoInput ? (() => {
+                const clean = valorServicoInput.replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+                const parsed = parseFloat(clean);
+                return isNaN(parsed) ? null : parsed;
+              })() : null
             };
           }
           return r;
@@ -414,6 +441,61 @@ export default function AcompanhamentoChamadoClient({
                   </select>
                 </div>
               </div>
+
+              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                <label htmlFor="isIncorporadoContrato">Chamado incorporado ao contrato? <span className={styles.required}>*</span></label>
+                <select
+                  id="isIncorporadoContrato"
+                  required
+                  value={isIncorporadoContratoInput ? 'Sim' : 'Não'}
+                  onChange={(e) => setIsIncorporadoContratoInput(e.target.value === 'Sim')}
+                  disabled={loading}
+                  style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff', marginTop: '6px' }}
+                >
+                  <option value="Sim">Sim</option>
+                  <option value="Não">Não</option>
+                </select>
+              </div>
+
+              {!isIncorporadoContratoInput && (
+                <>
+                  <div className={`${styles.formGroup} ${styles.fullWidth}`} style={{ animation: 'fadeIn 0.2s ease-out' }}>
+                    <label htmlFor="detalhesAtendimento">Detalhes do Atendimento Extra <span className={styles.required}>*</span></label>
+                    <textarea
+                      id="detalhesAtendimento"
+                      rows={3}
+                      placeholder="Descreva detalhadamente o atendimento extra prestado..."
+                      value={detalhesAtendimentoInput}
+                      onChange={(e) => setDetalhesAtendimentoInput(e.target.value)}
+                      disabled={loading}
+                      required
+                      style={{ marginTop: '6px' }}
+                    />
+                  </div>
+
+                  <div className={`${styles.formGroup} ${styles.fullWidth}`} style={{ animation: 'fadeIn 0.2s ease-out' }}>
+                    <label htmlFor="valorServico">Valor do Serviço Extra (R$) <span className={styles.required}>*</span></label>
+                    <input
+                      type="text"
+                      id="valorServico"
+                      placeholder="R$ 0,00"
+                      value={valorServicoInput}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/[^\d]/g, '');
+                        if (val) {
+                          const num = parseFloat(val) / 100;
+                          setValorServicoInput(num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+                        } else {
+                          setValorServicoInput('');
+                        }
+                      }}
+                      disabled={loading}
+                      required
+                      style={{ marginTop: '6px' }}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                 <label htmlFor="finalObservacao">Observações de Encerramento / Laudo Técnico</label>
@@ -661,6 +743,37 @@ export default function AcompanhamentoChamadoClient({
                               {req.finalObservacao && (
                                 <div className={styles.closedNotes} title={req.finalObservacao}>
                                   📝 Laudo técnico
+                                </div>
+                              )}
+                              {req.isIncorporadoContrato !== null && (
+                                <div style={{ marginTop: '4px', fontSize: '0.72rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  {req.isIncorporadoContrato ? (
+                                    <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                      📦 No Contrato
+                                    </span>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', color: '#ea580c' }}>
+                                      <span style={{ fontWeight: 700 }}>💰 Extra: R$ {req.valorServico?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}</span>
+                                      {req.detalhesAtendimento && (
+                                        <span 
+                                          className={styles.closedNotes} 
+                                          title={req.detalhesAtendimento} 
+                                          style={{ 
+                                            textDecoration: 'underline dotted', 
+                                            cursor: 'help', 
+                                            color: '#475569', 
+                                            display: 'block', 
+                                            maxWidth: '120px', 
+                                            overflow: 'hidden', 
+                                            textOverflow: 'ellipsis', 
+                                            whiteSpace: 'nowrap' 
+                                          }}
+                                        >
+                                          🔍 Detalhes extra
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

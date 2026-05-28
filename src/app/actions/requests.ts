@@ -538,9 +538,34 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
 
   const finishedAtStr = formData.get('finishedAt') as string;
   const finalObservacao = formData.get('finalObservacao') as string;
+  const isIncorporadoContratoStr = formData.get('isIncorporadoContrato') as string;
+  const detalhesAtendimento = formData.get('detalhesAtendimento') as string;
+  const valorServicoStr = formData.get('valorServico') as string;
 
   if (!finishedAtStr) {
     return { error: 'A data e hora do atendimento real é obrigatória.' };
+  }
+
+  const isIncorporadoContrato = isIncorporadoContratoStr === 'true' || isIncorporadoContratoStr === 'Sim';
+
+  if (!isIncorporadoContrato) {
+    if (!detalhesAtendimento || detalhesAtendimento.trim() === '') {
+      return { error: 'Os detalhes do atendimento extra são obrigatórios quando o chamado não for incorporado ao contrato.' };
+    }
+  }
+
+  let valorServico: number | null = null;
+  if (!isIncorporadoContrato && valorServicoStr) {
+    const cleanValue = valorServicoStr
+      .replace('R$', '')
+      .replace(/\s/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+    const parsedValue = parseFloat(cleanValue);
+    if (isNaN(parsedValue)) {
+      return { error: 'O valor monetário informado é inválido.' };
+    }
+    valorServico = parsedValue;
   }
 
   try {
@@ -572,7 +597,10 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
         status: 'CONCLUIDO',
         finishedAt,
         finishedBy: sessionUser.name,
-        finalObservacao: finalObservacao || null
+        finalObservacao: finalObservacao || null,
+        isIncorporadoContrato,
+        detalhesAtendimento: !isIncorporadoContrato ? detalhesAtendimento : null,
+        valorServico: !isIncorporadoContrato ? valorServico : null
       }
     });
 
