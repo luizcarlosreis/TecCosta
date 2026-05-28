@@ -542,8 +542,8 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
     return { error: 'Não autorizado. Por favor, realize o login novamente.' };
   }
 
-  // Apenas Administradores, TecCosta Gestão e Técnicos podem finalizar chamados
-  if (sessionUser.role !== 'ADMINISTRADOR' && sessionUser.role !== 'TECCOSTA_GESTAO' && sessionUser.role !== 'TECNICO') {
+  // Apenas Administradores e TecCosta Gestão podem finalizar chamados
+  if (sessionUser.role !== 'ADMINISTRADOR' && sessionUser.role !== 'TECCOSTA_GESTAO') {
     return { error: 'Você não tem permissão para finalizar chamados.' };
   }
 

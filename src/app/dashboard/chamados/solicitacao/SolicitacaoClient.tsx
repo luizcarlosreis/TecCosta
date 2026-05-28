@@ -706,6 +706,7 @@ export default function SolicitacaoClient({
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📅 Data Agendada:</span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <input
             type="date"
@@ -713,7 +714,7 @@ export default function SolicitacaoClient({
             value={filterDate}
             onChange={(e) => handleFilterChange(() => setFilterDate(e.target.value))}
             style={{ paddingRight: filterDate ? '34px' : '14px' }}
-            title="Filtrar por data de agendamento"
+            title="Filtrar por data agendada"
           />
           {filterDate && (
             <button

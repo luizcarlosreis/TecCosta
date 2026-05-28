@@ -152,8 +152,7 @@ export default function AcompanhamentoChamadoClient({
   const [success, setSuccess] = useState<string | null>(null);
 
   const canFinalize = sessionUser.role === 'ADMINISTRADOR' || 
-                      sessionUser.role === 'TECCOSTA_GESTAO' || 
-                      sessionUser.role === 'TECNICO';
+                      sessionUser.role === 'TECCOSTA_GESTAO';
 
   // Helpers de classificação de status conforme regras do negócio
   const getTicketStatus = (req: SerializedRequest) => {
@@ -244,6 +243,7 @@ export default function AcompanhamentoChamadoClient({
   const totalFechados = requests.filter((r) => r.status === 'CONCLUIDO' || r.status === 'CANCELADO').length;
 
   const handleFinalizeClick = (req: SerializedRequest) => {
+    if (!canFinalize) return;
     setSelectedRequest(req);
     setFinishedAtInput(getCurrentDateTimeLocal());
     setFinalObservacao('');
@@ -387,6 +387,12 @@ export default function AcompanhamentoChamadoClient({
             <div className={styles.requestInfoItem}>
               <span className={styles.requestInfoLabel}>Data Agendada</span>
               <span className={styles.requestInfoValue}>{formatDateTime(selectedRequest.dataAtendimento)}</span>
+            </div>
+            <div className={styles.requestInfoItem}>
+              <span className={styles.requestInfoLabel}>Prazo Final (SLA)</span>
+              <span className={styles.requestInfoValue} style={{ fontWeight: 600, color: '#dc2626' }}>
+                {formatDateTime(selectedRequest.prazoSla)}
+              </span>
             </div>
             <div className={styles.requestInfoItem}>
               <span className={styles.requestInfoLabel}>Abertura por</span>
@@ -578,6 +584,7 @@ export default function AcompanhamentoChamadoClient({
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📅 Data Agendada:</span>
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <input
               type="date"
@@ -585,7 +592,7 @@ export default function AcompanhamentoChamadoClient({
               value={filterDate}
               onChange={(e) => handleFilterChange(() => setFilterDate(e.target.value))}
               style={{ paddingRight: filterDate ? '34px' : '14px' }}
-              title="Filtrar por data de agendamento"
+              title="Filtrar por data agendada"
             />
             {filterDate && (
               <button
