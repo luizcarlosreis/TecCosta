@@ -465,14 +465,37 @@ export default function AcompanhamentoClient({
 
               <div className={styles.formGroup}>
                 <label htmlFor="dataAtendimento">Data e Hora de Agendamento {formStatus !== 'CANCELADO' && <span className={styles.required}>*</span>}</label>
-                <input
-                  type="datetime-local"
-                  id="dataAtendimento"
-                  value={formDataAtendimento}
-                  onChange={(e) => setFormDataAtendimento(e.target.value)}
-                  disabled={loading}
-                  required={formStatus !== 'CANCELADO'}
-                />
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <input
+                    type="date"
+                    value={formDataAtendimento ? formDataAtendimento.split('T')[0] || '' : ''}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const currentTime = formDataAtendimento ? formDataAtendimento.split('T')[1] || '08:00' : '08:00';
+                      setFormDataAtendimento(`${newDate}T${currentTime}`);
+                    }}
+                    disabled={loading}
+                    required={formStatus !== 'CANCELADO'}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                    title="Selecionar data do agendamento"
+                  />
+                  <input
+                    type="time"
+                    min="08:00"
+                    max="18:00"
+                    value={formDataAtendimento ? formDataAtendimento.split('T')[1] || '' : ''}
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      const currentDate = formDataAtendimento ? formDataAtendimento.split('T')[0] || new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                      setFormDataAtendimento(`${currentDate}T${newTime}`);
+                    }}
+                    disabled={loading}
+                    required={formStatus !== 'CANCELADO'}
+                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                    title="Selecionar hora comercial do agendamento (08:00 às 18:00)"
+                  />
+                </div>
               </div>
 
               <div className={styles.formGroup}>

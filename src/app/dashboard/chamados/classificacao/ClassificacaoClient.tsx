@@ -495,15 +495,37 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
               {nivelCriticidade === '4' && (
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                   <label htmlFor="prazoSla">Prazo Limite de Atendimento (SLA) <span className={styles.required}>*</span></label>
-                  <input
-                    type="datetime-local"
-                    id="prazoSla"
-                    value={prazoSlaManual}
-                    onChange={(e) => setPrazoSlaManual(e.target.value)}
-                    required
-                    disabled={loading}
-                    min={new Date().toISOString().slice(0, 16)}
-                  />
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                    <input
+                      type="date"
+                      required
+                      value={prazoSlaManual ? prazoSlaManual.split('T')[0] || '' : ''}
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        const currentTime = prazoSlaManual ? prazoSlaManual.split('T')[1] || '08:00' : '08:00';
+                        setPrazoSlaManual(`${newDate}T${currentTime}`);
+                      }}
+                      disabled={loading}
+                      min={new Date().toISOString().split('T')[0]}
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                      title="Selecionar data do SLA"
+                    />
+                    <input
+                      type="time"
+                      min="08:00"
+                      max="18:00"
+                      required
+                      value={prazoSlaManual ? prazoSlaManual.split('T')[1] || '' : ''}
+                      onChange={(e) => {
+                        const newTime = e.target.value;
+                        const currentDate = prazoSlaManual ? prazoSlaManual.split('T')[0] || new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                        setPrazoSlaManual(`${currentDate}T${newTime}`);
+                      }}
+                      disabled={loading}
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                      title="Selecionar hora comercial do SLA (08:00 às 18:00)"
+                    />
+                  </div>
                 </div>
               )}
 
