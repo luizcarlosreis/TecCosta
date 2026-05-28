@@ -33,7 +33,7 @@ export default async function AcompanhamentoPage() {
       nivelCriticidade: { not: null }
     },
     include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'asc' }
   });
 
   // Buscar técnicos disponíveis para o dropdown

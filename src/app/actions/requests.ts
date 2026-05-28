@@ -395,12 +395,12 @@ export async function getAllRequestsAction() {
       requests = await prisma.maintenanceRequest.findMany({
         where: { clientId: { in: clientIds } },
         include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'asc' }
       });
     } else {
       requests = await prisma.maintenanceRequest.findMany({
         include: { client: true, technician: true, schedulings: { orderBy: { createdAt: 'desc' } } },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'asc' }
       });
     }
 

@@ -37,13 +37,13 @@ export default async function AcompanhamentoChamadoPage() {
         technicianId: sessionUser.id
       },
       include: { client: true, technician: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     });
   } else {
     // Admins e Gestão veem tudo
     requests = await prisma.maintenanceRequest.findMany({
       include: { client: true, technician: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     });
   }
 
