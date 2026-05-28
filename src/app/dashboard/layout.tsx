@@ -15,6 +15,7 @@ export default function DashboardLayout({
 
   // Dados do usuário logado lidos via API (cookie httpOnly não é acessível no browser)
   const [sessionUser, setSessionUser] = useState<{ name: string; role: string } | null>(null);
+  const [isChamadosOpen, setIsChamadosOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/session')
@@ -24,6 +25,12 @@ export default function DashboardLayout({
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (pathname && pathname.startsWith('/dashboard/chamados')) {
+      setIsChamadosOpen(true);
+    }
+  }, [pathname]);
 
   // Gera as iniciais a partir do nome completo
   const getInitials = (name: string) => {
@@ -49,16 +56,6 @@ export default function DashboardLayout({
     await logoutAction();
   };
 
-  const menuItems = [
-    { name: 'Início', href: '/dashboard', icon: '🏠' },
-    { name: 'Clientes', href: '/dashboard/clientes', icon: '👥' },
-    { name: 'Usuários', href: '/dashboard/usuarios', icon: '👤' },
-    { name: 'Solicitação de Chamado', href: '/dashboard/chamados/solicitacao', icon: '📝' },
-    { name: 'Classificação do Chamado', href: '/dashboard/chamados/classificacao', icon: '🗂️' },
-    { name: 'Agendamento do chamado', href: '/dashboard/chamados/acompanhamento', icon: '📊' },
-    { name: 'Acompanhamento de chamado', href: '/dashboard/chamados/acompanhamento-chamado', icon: '📈' },
-  ];
-
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
@@ -74,16 +71,76 @@ export default function DashboardLayout({
         </div>
         
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <Link 
-              key={item.href} 
-              href={item.href}
-              className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+          <Link 
+            href="/dashboard"
+            className={`nav-item ${pathname === '/dashboard' ? 'active' : ''}`}
+          >
+            <span className="icon">🏠</span>
+            <span className="label">Início</span>
+          </Link>
+          
+          <Link 
+            href="/dashboard/clientes"
+            className={`nav-item ${pathname === '/dashboard/clientes' ? 'active' : ''}`}
+          >
+            <span className="icon">👥</span>
+            <span className="label">Clientes</span>
+          </Link>
+
+          <Link 
+            href="/dashboard/usuarios"
+            className={`nav-item ${pathname === '/dashboard/usuarios' ? 'active' : ''}`}
+          >
+            <span className="icon">👤</span>
+            <span className="label">Usuários</span>
+          </Link>
+
+          {/* Grupo de Chamados */}
+          <div className="nav-group">
+            <button 
+              onClick={() => setIsChamadosOpen(!isChamadosOpen)}
+              className={`group-header-btn ${pathname.startsWith('/dashboard/chamados') ? 'group-active' : ''}`}
             >
-              <span className="icon">{item.icon}</span>
-              <span className="label">{item.name}</span>
-            </Link>
-          ))}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span className="icon">📋</span>
+                <span className="label">Chamados</span>
+              </div>
+              <span className={`arrow ${isChamadosOpen ? 'arrow-open' : ''}`}>▼</span>
+            </button>
+
+            {isChamadosOpen && (
+              <div className="nav-submenu">
+                <Link 
+                  href="/dashboard/chamados/solicitacao"
+                  className={`submenu-item ${pathname === '/dashboard/chamados/solicitacao' ? 'active' : ''}`}
+                >
+                  <span className="icon">📝</span>
+                  <span className="label">Solicitação</span>
+                </Link>
+                <Link 
+                  href="/dashboard/chamados/classificacao"
+                  className={`submenu-item ${pathname === '/dashboard/chamados/classificacao' ? 'active' : ''}`}
+                >
+                  <span className="icon">🗂️</span>
+                  <span className="label">Classificação</span>
+                </Link>
+                <Link 
+                  href="/dashboard/chamados/acompanhamento"
+                  className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento' ? 'active' : ''}`}
+                >
+                  <span className="icon">📊</span>
+                  <span className="label">Agendamento</span>
+                </Link>
+                <Link 
+                  href="/dashboard/chamados/acompanhamento-chamado"
+                  className={`submenu-item ${pathname === '/dashboard/chamados/acompanhamento-chamado' ? 'active' : ''}`}
+                >
+                  <span className="icon">📈</span>
+                  <span className="label">Acompanhamento</span>
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
         
         <div className="sidebar-footer">
@@ -174,6 +231,92 @@ export default function DashboardLayout({
         .nav-item .icon {
           margin-right: 12px;
           font-size: 1.2rem;
+        }
+
+        /* Submenu and groups */
+        .nav-group {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .group-header-btn {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          border-radius: 8px;
+          color: rgba(255, 255, 255, 0.7);
+          transition: all 0.2s;
+          font-weight: 500;
+          background: none;
+          border: none;
+          width: 100%;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .group-header-btn:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+
+        .group-active {
+          color: white;
+          font-weight: 600;
+        }
+
+        .arrow {
+          font-size: 0.7rem;
+          transition: transform 0.2s ease;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .arrow-open {
+          transform: rotate(180deg);
+        }
+
+        .nav-submenu {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding-left: 20px;
+          margin-top: 2px;
+          border-left: 1px dashed rgba(255, 255, 255, 0.2);
+          margin-left: 24px;
+          animation: slideDownSubmenu 0.25s ease-out forwards;
+        }
+
+        .submenu-item {
+          display: flex;
+          align-items: center;
+          padding: 10px 14px;
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.65);
+          transition: all 0.2s;
+          font-weight: 500;
+          font-size: 0.9rem;
+        }
+
+        .submenu-item:hover {
+          background-color: rgba(255, 255, 255, 0.08);
+          color: white;
+        }
+
+        .submenu-item.active {
+          background-color: var(--secondary-color);
+          color: white;
+          font-weight: 600;
+        }
+
+        .submenu-item .icon {
+          margin-right: 10px;
+          font-size: 1.1rem;
+        }
+
+        @keyframes slideDownSubmenu {
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         .sidebar-footer {
