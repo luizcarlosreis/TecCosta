@@ -227,9 +227,13 @@ export default function DashboardLayout({
             </button>
 
             {isUserMenuOpen && (
-              <div className="user-dropdown glass">
+              <div 
+                className="user-dropdown glass"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setIsProfileModalOpen(true);
                     setIsUserMenuOpen(false);
                   }}
@@ -238,7 +242,10 @@ export default function DashboardLayout({
                   <span className="icon">👤</span> Meu Perfil
                 </button>
                 <button 
-                  onClick={handleLogout}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLogout();
+                  }}
                   className="dropdown-item logout-item"
                 >
                   <span className="icon">🚪</span> Sair
