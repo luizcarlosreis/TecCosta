@@ -24,6 +24,16 @@ function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   // Desloca a data em -3 horas para fazer todos os cálculos em UTC representando o fuso de Brasília (GMT-3)
   const date = new Date(startDate.getTime() - 3 * 60 * 60 * 1000);
 
+  // Helper para pular finais de semana (Sábado = 6, Domingo = 0)
+  const skipWeekends = (d: Date) => {
+    while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+  };
+
+  // Pular fim de semana se a data inicial cair em um
+  skipWeekends(date);
+
   // Se a hora inicial estiver fora do horário comercial (Brasília):
   // Se for antes das 08:00, ajusta para 08:00 do mesmo dia.
   // Se for a partir das 18:00, ajusta para 08:00 do dia seguinte.
@@ -31,26 +41,30 @@ function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
     date.setUTCHours(8, 0, 0, 0);
   } else if (date.getUTCHours() >= 18) {
     date.setUTCDate(date.getUTCDate() + 1);
+    skipWeekends(date);
     date.setUTCHours(8, 0, 0, 0);
   }
 
-  let remainingHours = hoursToAdd;
-  while (remainingHours > 0) {
+  let remainingMinutes = hoursToAdd * 60;
+  while (remainingMinutes > 0) {
     const currentHour = date.getUTCHours();
-    const availableHoursToday = 18 - currentHour;
+    const currentMinutes = currentHour * 60 + date.getUTCMinutes();
+    const availableMinutesToday = (18 * 60) - currentMinutes;
 
-    if (availableHoursToday <= 0) {
+    if (availableMinutesToday <= 0) {
       date.setUTCDate(date.getUTCDate() + 1);
+      skipWeekends(date);
       date.setUTCHours(8, 0, 0, 0);
       continue;
     }
 
-    if (remainingHours <= availableHoursToday) {
-      date.setUTCHours(currentHour + remainingHours);
-      remainingHours = 0;
+    if (remainingMinutes <= availableMinutesToday) {
+      date.setUTCMinutes(date.getUTCMinutes() + remainingMinutes);
+      remainingMinutes = 0;
     } else {
-      remainingHours -= availableHoursToday;
+      remainingMinutes -= availableMinutesToday;
       date.setUTCDate(date.getUTCDate() + 1);
+      skipWeekends(date);
       date.setUTCHours(8, 0, 0, 0);
     }
   }
@@ -355,7 +369,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
       const defaultSomar: Record<number, number> = { 1: 5, 2: 10, 3: 30 };
       const horasSomar = config ? config.horasSomadas : (defaultSomar[nivelInt] || 5);
       
-      prazoSla = calculateBusinessSla(now, horasSomar);
+      prazoSla = calculateBusinessSla(existing.createdAt, horasSomar);
     }
 
     await prisma.maintenanceRequest.update({

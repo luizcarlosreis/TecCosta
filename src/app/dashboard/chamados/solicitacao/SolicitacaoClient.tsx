@@ -114,6 +114,16 @@ const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }>
 function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   const date = new Date(startDate);
 
+  // Helper para pular finais de semana (Sábado = 6, Domingo = 0)
+  const skipWeekends = (d: Date) => {
+    while (d.getDay() === 0 || d.getDay() === 6) {
+      d.setDate(d.getDate() + 1);
+    }
+  };
+
+  // Pular fim de semana se a data inicial cair em um
+  skipWeekends(date);
+
   // Se a hora inicial estiver fora do horário comercial:
   // Se for antes das 08:00, ajusta para 08:00 do mesmo dia.
   // Se for a partir das 18:00, ajusta para 08:00 do dia seguinte.
@@ -121,44 +131,49 @@ function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
     date.setHours(8, 0, 0, 0);
   } else if (date.getHours() >= 18) {
     date.setDate(date.getDate() + 1);
+    skipWeekends(date);
     date.setHours(8, 0, 0, 0);
   }
 
-  let remainingHours = hoursToAdd;
-  while (remainingHours > 0) {
+  let remainingMinutes = hoursToAdd * 60;
+  while (remainingMinutes > 0) {
     const currentHour = date.getHours();
-    const availableHoursToday = 18 - currentHour;
+    const currentMinutes = currentHour * 60 + date.getMinutes();
+    const availableMinutesToday = (18 * 60) - currentMinutes;
 
-    if (availableHoursToday <= 0) {
+    if (availableMinutesToday <= 0) {
       date.setDate(date.getDate() + 1);
+      skipWeekends(date);
       date.setHours(8, 0, 0, 0);
       continue;
     }
 
-    if (remainingHours <= availableHoursToday) {
-      date.setHours(currentHour + remainingHours);
-      remainingHours = 0;
+    if (remainingMinutes <= availableMinutesToday) {
+      date.setMinutes(date.getMinutes() + remainingMinutes);
+      remainingMinutes = 0;
     } else {
-      remainingHours -= availableHoursToday;
+      remainingMinutes -= availableMinutesToday;
       date.setDate(date.getDate() + 1);
+      skipWeekends(date);
       date.setHours(8, 0, 0, 0);
     }
   }
+
   return date;
 }
 
 function getPrazoFinal(req: SerializedRequest): string | null {
   if (req.prazoSla) return req.prazoSla;
-  if (!req.classifiedAt || !req.nivelCriticidade) return null;
-  const classifiedDate = new Date(req.classifiedAt);
+  if (!req.nivelCriticidade) return null;
+  const startDate = new Date(req.createdAt);
   if (req.nivelCriticidade === '1') {
-    return calculateBusinessSla(classifiedDate, 4).toISOString();
+    return calculateBusinessSla(startDate, 5).toISOString();
   }
   if (req.nivelCriticidade === '2') {
-    return calculateBusinessSla(classifiedDate, 24).toISOString();
+    return calculateBusinessSla(startDate, 10).toISOString();
   }
   if (req.nivelCriticidade === '3') {
-    return calculateBusinessSla(classifiedDate, 72).toISOString();
+    return calculateBusinessSla(startDate, 30).toISOString();
   }
   if (req.nivelCriticidade === '4') {
     return req.prazoSla;
