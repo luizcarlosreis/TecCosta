@@ -20,7 +20,7 @@ async function getSessionUser() {
 
 // Helper para calcular o SLA considerando o horário comercial das 08:00 às 18:00.
 // Se ultrapassar 18:00, as horas restantes continuam a contar a partir das 08:00 do próximo dia comercial.
-export function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
+function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   const date = new Date(startDate);
 
   // Se a hora inicial estiver fora do horário comercial:
