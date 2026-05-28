@@ -111,6 +111,7 @@ function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
 }
 
 function getPrazoFinal(req: SerializedRequest): string | null {
+  if (req.prazoSla) return req.prazoSla;
   if (!req.classifiedAt || !req.nivelCriticidade) return null;
   const classifiedDate = new Date(req.classifiedAt);
   if (req.nivelCriticidade === '1') {

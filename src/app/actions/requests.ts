@@ -347,9 +347,15 @@ export async function classifyRequestAction(id: number, formData: FormData) {
         }
       }
     } else {
-      const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
-      const horas = horasMap[nivelCriticidade];
-      prazoSla = calculateBusinessSla(now, horas);
+      const nivelInt = parseInt(nivelCriticidade, 10);
+      const config = await prisma.slaConfig.findUnique({
+        where: { nivel: nivelInt }
+      });
+      // Fallback para os valores padrão caso a tabela ainda esteja vazia
+      const defaultSomar: Record<number, number> = { 1: 5, 2: 10, 3: 30 };
+      const horasSomar = config ? config.horasSomadas : (defaultSomar[nivelInt] || 5);
+      
+      prazoSla = calculateBusinessSla(now, horasSomar);
     }
 
     await prisma.maintenanceRequest.update({

@@ -117,6 +117,17 @@ export default function DashboardLayout({
             </Link>
           )}
 
+          {/* Configuração SLA — apenas ADMINISTRADOR e TECCOSTA_GESTAO */}
+          {sessionUser && (sessionUser.role === 'ADMINISTRADOR' || sessionUser.role === 'TECCOSTA_GESTAO') && (
+            <Link 
+              href="/dashboard/sla"
+              className={`nav-item ${pathname === '/dashboard/sla' ? 'active' : ''}`}
+            >
+              <span className="icon">⚙️</span>
+              <span className="label">Regras SLA</span>
+            </Link>
+          )}
+
           {/* Grupo de Chamados — visível para todos, mas submenus filtrados por role */}
           {sessionUser && (() => {
             const role = sessionUser.role;

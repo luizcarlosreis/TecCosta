@@ -118,3 +118,13 @@ model SchedulingHistory {
   changedBy       String
   createdAt       DateTime           @default(now())
 }
+
+model SlaConfig {
+  id            String   @id @default(cuid())
+  nivel         Int      @unique // Nível (ex: 1, 2, 3)
+  horasSla      Int      // Horas de SLA / Prazo corrido (ex: 4, 24, 72)
+  horasSomadas  Int      // Horas a ser somada no SLA para horário comercial (ex: 5, 10, 30)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
