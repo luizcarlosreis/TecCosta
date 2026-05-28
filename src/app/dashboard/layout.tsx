@@ -15,7 +15,7 @@ export default function DashboardLayout({
 
   // Dados do usuário logado lidos via API (cookie httpOnly não é acessível no browser)
   const [sessionUser, setSessionUser] = useState<{ id: string; name: string; role: string } | null>(null);
-  const [isChamadosOpen, setIsChamadosOpen] = useState(false);
+  const [isChamadosOpen, setIsChamadosOpen] = useState(true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -26,9 +26,9 @@ export default function DashboardLayout({
         setIsUserMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, []);
 
@@ -200,7 +200,10 @@ export default function DashboardLayout({
           <div ref={userMenuRef} className="header-user-wrapper" style={{ position: 'relative' }}>
             <button 
               className="header-user" 
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsUserMenuOpen(!isUserMenuOpen);
+              }}
               style={{
                 background: 'none',
                 border: 'none',
