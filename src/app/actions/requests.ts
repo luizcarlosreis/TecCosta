@@ -56,6 +56,14 @@ function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   return date;
 }
 
+// Helper para interpretar strings datetime-local do cliente no fuso horário de Brasília (GMT-3)
+function parseBrasiliaDateTime(dateTimeStr: string): Date {
+  if (dateTimeStr && dateTimeStr.includes('T') && !dateTimeStr.endsWith('Z') && !/[-+]\d{2}:\d{2}$/.test(dateTimeStr)) {
+    return new Date(`${dateTimeStr}-03:00`);
+  }
+  return new Date(dateTimeStr);
+}
+
 export async function createRequestAction(formData: FormData) {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
@@ -322,7 +330,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
       if (!prazoSlaStr) {
         return { error: 'Para o Nível 4 (Agendado), informe o prazo limite do chamado (SLA).' };
       }
-      prazoSla = new Date(prazoSlaStr);
+      prazoSla = parseBrasiliaDateTime(prazoSlaStr);
       if (isNaN(prazoSla.getTime())) {
         return { error: 'Prazo limite (SLA) informado é inválido.' };
       }
@@ -349,6 +357,7 @@ export async function classifyRequestAction(id: number, formData: FormData) {
         classifiedById: sessionUser.id,
         classifiedAt: now,
         prazoSla,
+        dataAtendimento: nivelCriticidade === '4' ? prazoSla : null,
         status: 'EM_ANDAMENTO'
       }
     });
@@ -443,7 +452,7 @@ export async function updateRequestStatusAction(id: number, formData: FormData) 
 
     let parsedDate: Date | null = null;
     if (dataAtendimentoStr) {
-      parsedDate = new Date(dataAtendimentoStr);
+      parsedDate = parseBrasiliaDateTime(dataAtendimentoStr);
       if (isNaN(parsedDate.getTime())) {
         return { error: 'Data e hora de agendamento inválidas.' };
       }
@@ -577,7 +586,7 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
       return { error: 'Chamado não encontrado.' };
     }
 
-    const finishedAt = new Date(finishedAtStr);
+    const finishedAt = parseBrasiliaDateTime(finishedAtStr);
     if (isNaN(finishedAt.getTime())) {
       return { error: 'Data/hora de atendimento real inválida.' };
     }
