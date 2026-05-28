@@ -14,8 +14,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   // Dados do usuário logado lidos via API (cookie httpOnly não é acessível no browser)
-  const [sessionUser, setSessionUser] = useState<{ name: string; role: string } | null>(null);
+  const [sessionUser, setSessionUser] = useState<{ id: string; name: string; role: string } | null>(null);
   const [isChamadosOpen, setIsChamadosOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/session')
@@ -182,14 +184,51 @@ export default function DashboardLayout({
 
       <main className="dashboard-main">
         <header className="dashboard-header glass">
-          <div className="header-user">
-            <div className="user-info">
-              <p className="user-name">{sessionUser ? sessionUser.name : '...'}</p>
-              <p className="user-role">{sessionUser ? getRoleLabel(sessionUser.role) : ''}</p>
-            </div>
-            <div className="user-avatar">
-              {sessionUser ? getInitials(sessionUser.name) : '??'}
-            </div>
+          <div className="header-user-wrapper" style={{ position: 'relative' }}>
+            <button 
+              className="header-user" 
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                transition: 'background 0.2s',
+              }}
+            >
+              <div className="user-info">
+                <p className="user-name">{sessionUser ? sessionUser.name : '...'}</p>
+                <p className="user-role">{sessionUser ? getRoleLabel(sessionUser.role) : ''}</p>
+              </div>
+              <div className="user-avatar">
+                {sessionUser ? getInitials(sessionUser.name) : '??'}
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>{isUserMenuOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {isUserMenuOpen && (
+              <div className="user-dropdown glass">
+                <button 
+                  onClick={() => {
+                    setIsProfileModalOpen(true);
+                    setIsUserMenuOpen(false);
+                  }}
+                  className="dropdown-item"
+                >
+                  <span className="icon">👤</span> Meu Perfil
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="dropdown-item logout-item"
+                >
+                  <span className="icon">🚪</span> Sair
+                </button>
+              </div>
+            )}
           </div>
         </header>
         
@@ -197,6 +236,46 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+
+      {isProfileModalOpen && sessionUser && (
+        <div className="profile-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <h2>Meu Perfil</h2>
+              <button className="close-modal-btn" onClick={() => setIsProfileModalOpen(false)}>✕</button>
+            </div>
+            
+            <div className="profile-modal-body">
+              <div className="profile-large-avatar">
+                {getInitials(sessionUser.name)}
+              </div>
+              
+              <div className="profile-detail-group">
+                <label>Nome Completo</label>
+                <p className="profile-value">{sessionUser.name}</p>
+              </div>
+
+              <div className="profile-detail-group">
+                <label>Perfil de Acesso</label>
+                <span className="profile-badge-role">
+                  {getRoleLabel(sessionUser.role)}
+                </span>
+              </div>
+
+              <div className="profile-detail-group">
+                <label>Identificação do Sistema</label>
+                <p className="profile-value" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                  ID: {sessionUser.id || 'N/A'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="profile-modal-footer">
+              <button className="btn-modal-close" onClick={() => setIsProfileModalOpen(false)}>Fechar Perfil</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .dashboard-container {
@@ -207,7 +286,7 @@ export default function DashboardLayout({
         }
 
         .sidebar {
-          width: 350px;
+          width: 280px;
           background-color: var(--primary-color);
           color: white;
           display: flex;
@@ -434,6 +513,193 @@ export default function DashboardLayout({
           overflow-y: auto;
           position: relative;
           z-index: 100;
+        }
+
+        /* Dropdown usuário */
+        .user-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 8px;
+          min-width: 180px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          z-index: 1000;
+        }
+
+        .dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 10px 14px;
+          border: none;
+          background: none;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          cursor: pointer;
+          transition: all 0.2s;
+          text-align: left;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f1f5f9;
+          transform: translateX(3px);
+        }
+
+        .dropdown-item .icon {
+          font-size: 1.1rem;
+        }
+
+        .logout-item:hover {
+          color: #ef4444;
+          background-color: #fee2e2;
+        }
+
+        /* Profile Modal */
+        .profile-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+
+        .profile-modal-content {
+          background: white;
+          border-radius: 20px;
+          width: 90%;
+          max-width: 400px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .profile-modal-header {
+          padding: 20px 24px;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .profile-modal-header h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--primary-color);
+          margin: 0;
+        }
+
+        .close-modal-btn {
+          background: none;
+          border: none;
+          font-size: 1.2rem;
+          color: #94a3b8;
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+
+        .close-modal-btn:hover {
+          color: #334155;
+        }
+
+        .profile-modal-body {
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .profile-large-avatar {
+          width: 80px;
+          height: 80px;
+          background: var(--primary-color);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.8rem;
+          font-weight: 700;
+          box-shadow: 0 10px 15px -3px rgba(0, 51, 102, 0.3);
+        }
+
+        .profile-detail-group {
+          width: 100%;
+          text-align: left;
+        }
+
+        .profile-detail-group label {
+          display: block;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 6px;
+        }
+
+        .profile-value {
+          font-size: 1rem;
+          font-weight: 500;
+          color: var(--text-primary);
+          margin: 0;
+        }
+
+        .profile-badge-role {
+          display: inline-block;
+          padding: 6px 12px;
+          background: #e0f2fe;
+          color: #0369a1;
+          font-size: 0.85rem;
+          font-weight: 700;
+          border-radius: 20px;
+        }
+
+        .profile-modal-overlay .profile-modal-footer {
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: flex-end;
+          width: 100%;
+        }
+
+        .btn-modal-close {
+          padding: 10px 16px;
+          background: var(--primary-color);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .btn-modal-close:hover {
+          background: var(--secondary-color);
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>
