@@ -310,6 +310,18 @@ export default function ClassificacaoClient({ pendingRequests, sessionUser }: Cl
           setLoading(false);
           return;
         }
+
+        // Validar horário comercial diretamente a partir do texto do input (das 08:00 às 18:00)
+        const hourPart = prazoSlaManual.split('T')[1];
+        if (hourPart) {
+          const hour = parseInt(hourPart.split(':')[0], 10);
+          if (hour < 8 || hour >= 18) {
+            setError('O prazo limite (SLA) deve ser em horário comercial, das 08:00 às 18:00.');
+            setLoading(false);
+            return;
+          }
+        }
+
         formData.append('prazoSla', prazoSlaManual);
       }
 

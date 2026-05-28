@@ -326,6 +326,15 @@ export async function classifyRequestAction(id: number, formData: FormData) {
       if (isNaN(prazoSla.getTime())) {
         return { error: 'Prazo limite (SLA) informado é inválido.' };
       }
+
+      // Validar horário comercial diretamente a partir do texto do input (das 08:00 às 18:00)
+      const hourPart = prazoSlaStr.split('T')[1];
+      if (hourPart) {
+        const hour = parseInt(hourPart.split(':')[0], 10);
+        if (hour < 8 || hour >= 18) {
+          return { error: 'O prazo limite (SLA) deve ser em horário comercial, das 08:00 às 18:00.' };
+        }
+      }
     } else {
       const horasMap: Record<string, number> = { '1': 4, '2': 24, '3': 72 };
       const horas = horasMap[nivelCriticidade];
