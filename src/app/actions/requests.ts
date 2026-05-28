@@ -557,6 +557,15 @@ export async function finalizeRequestAction(id: number, formData: FormData) {
       return { error: 'Data/hora de atendimento real inválida.' };
     }
 
+    // Validar horário comercial diretamente a partir do texto do input (das 08:00 às 18:00)
+    const hourPart = finishedAtStr.split('T')[1];
+    if (hourPart) {
+      const hour = parseInt(hourPart.split(':')[0], 10);
+      if (hour < 8 || hour >= 18) {
+        return { error: 'A hora do atendimento real deve ser comercial, das 08:00 às 18:00.' };
+      }
+    }
+
     await prisma.maintenanceRequest.update({
       where: { id },
       data: {

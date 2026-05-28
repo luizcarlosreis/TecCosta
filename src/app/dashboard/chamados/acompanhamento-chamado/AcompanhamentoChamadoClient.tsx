@@ -52,6 +52,12 @@ const NIVEL_LABELS: Record<string, { label: string; color: string; bg: string }>
   '4': { label: 'N4 – Agendado',    color: '#7c3aed', bg: '#ede9fe' },
 };
 
+const TIME_OPTIONS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00'
+];
+
 function calculateBusinessSla(startDate: Date, hoursToAdd: number): Date {
   const date = new Date(startDate);
 
@@ -257,6 +263,17 @@ export default function AcompanhamentoChamadoClient({
     setError(null);
     setSuccess(null);
 
+    // Validar horário comercial diretamente a partir do texto do input (das 08:00 às 18:00)
+    const hourPart = finishedAtInput.split('T')[1];
+    if (hourPart) {
+      const hour = parseInt(hourPart.split(':')[0], 10);
+      if (hour < 8 || hour >= 18) {
+        setError('O horário do atendimento real deve ser comercial, das 08:00 às 18:00.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append('finishedAt', finishedAtInput);
@@ -361,14 +378,41 @@ export default function AcompanhamentoChamadoClient({
             <div className={styles.formGrid}>
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                 <label htmlFor="finishedAt">Data e Hora do Atendimento Real <span className={styles.required}>*</span></label>
-                <input
-                  type="datetime-local"
-                  id="finishedAt"
-                  value={finishedAtInput}
-                  onChange={(e) => setFinishedAtInput(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <input
+                    type="date"
+                    required
+                    value={finishedAtInput ? finishedAtInput.split('T')[0] || '' : ''}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const currentTime = finishedAtInput ? finishedAtInput.split('T')[1] || '08:00' : '08:00';
+                      setFinishedAtInput(`${newDate}T${currentTime}`);
+                    }}
+                    disabled={loading}
+                    max={new Date().toISOString().split('T')[0]}
+                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem' }}
+                    title="Selecionar data do atendimento real"
+                  />
+                  <select
+                    required
+                    value={finishedAtInput ? finishedAtInput.split('T')[1] || '' : ''}
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      const currentDate = finishedAtInput ? finishedAtInput.split('T')[0] || new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                      setFinishedAtInput(`${currentDate}T${newTime}`);
+                    }}
+                    disabled={loading}
+                    style={{ flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}
+                    title="Selecionar hora comercial do atendimento real (08:00 às 18:00)"
+                  >
+                    <option value="">-- Hora --</option>
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className={`${styles.formGroup} ${styles.fullWidth}`}>
