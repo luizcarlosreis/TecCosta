@@ -160,7 +160,7 @@ function getPrazoFinal(req: SerializedRequest): string | null {
     return calculateBusinessSla(classifiedDate, 72).toISOString();
   }
   if (req.nivelCriticidade === '4') {
-    return req.dataAtendimento;
+    return req.prazoSla;
   }
   return null;
 }

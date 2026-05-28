@@ -360,7 +360,6 @@ export async function classifyRequestAction(id: number, formData: FormData) {
         classifiedById: sessionUser.id,
         classifiedAt: now,
         prazoSla,
-        dataAtendimento: nivelCriticidade === '4' ? prazoSla : null,
         status: 'EM_ANDAMENTO'
       }
     });
