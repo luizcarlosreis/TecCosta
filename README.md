@@ -6,7 +6,7 @@ Este √© o portal oficial da TecCosta para registro e acompanhamento de solicita√
 - Estrutura Inicial: OK
 - Design Premium: OK
 - Database Schema: OK
-- Deployment: Em progresso no Vercel
+- Deployment: Em progresso no Vercel.
 
 ## Tecnologias
 - Next.js 16
